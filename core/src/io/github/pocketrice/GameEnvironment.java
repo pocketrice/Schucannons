@@ -2,6 +2,7 @@ package io.github.pocketrice;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Camera;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
 import com.badlogic.gdx.graphics.g3d.Environment;
 import com.badlogic.gdx.graphics.g3d.ModelBatch;
@@ -23,23 +24,22 @@ public class GameEnvironment {
     HUD hud;
     Environment env;
     Match match;
-    public static final Vector3 CAMERA_POS = new Vector3(0f, 3f, 0f), CAMERA_LOOK = new Vector3(-10f, 5f, 10f);
-
+    public static final Vector3 CAMERA_POS = new Vector3(0f, 5f, 0f), CAMERA_LOOK = new Vector3(2f, 5f, 2f);
 
     public GameEnvironment(Match m) {
-        envModel = new ModelInstance(new GLTFLoader().load(Gdx.files.internal("models/env.gltf")).scene.model);
-        envModel.transform.scale(20f, 20f, 20f);
+        envModel = new ModelInstance(new GLTFLoader().load(Gdx.files.internal("models/cannonball.gltf")).scene.model);
+        envModel.transform.scale(10f, 10f, 10f);
         projModel = new ModelInstance(new GLTFLoader().load(Gdx.files.internal("models/cannonball.gltf")).scene.model);
         projModel.transform.scale(2f,2f,2f);
         batch = new ModelBatch();
 
         match = m;
         hud = new HUD(match);
-        gameCam = new PerspectiveCamera(100, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+        gameCam = new PerspectiveCamera(67, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
         gameCam.position.set(CAMERA_POS);
         gameCam.lookAt(CAMERA_LOOK);
         gameCam.near = 0.1f;
-        gameCam.far = 100f;
+        gameCam.far = 500f;
         gameCam.update();
         gameCic = new CameraInputController(gameCam);
         Gdx.input.setInputProcessor(gameCic);
@@ -51,6 +51,7 @@ public class GameEnvironment {
     }
 
     public void render() {
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
         batch.begin(gameCam);
         batch.render(envModel);
         batch.render(projModel);
@@ -58,11 +59,12 @@ public class GameEnvironment {
         batch.end();
     }
     public void animTurn() {
-
+        System.out.println("anim'ed");
     }
 
     public void dispose() {
-
+        batch.dispose();
+        hud.dispose();
     }
 
     public boolean isLegal(Vector3 loc) {

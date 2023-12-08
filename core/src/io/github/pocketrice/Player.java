@@ -13,7 +13,7 @@ import java.util.UUID;
 public abstract class Player {
 
     @Setter
-    int points = 0;
+    int health = 0;
 
     @Setter
     Color playerColor = Color.GRAY;
@@ -23,8 +23,10 @@ public abstract class Player {
     Vector3 projVector = Vector3.Zero;
 
     UUID playerId;
+    @Setter
+    String playerName;
 
-    public abstract void deductPoint();
-    public abstract Vector3 requestProjVector(); // the proj vector is CALCULATED (angle is chosen. magnitude of force is clamped 1-3 or chosen, direction is auto-set or chosen. In other words, just angle and 1-3 mag)
+    public abstract void deductHealth();
+    public abstract void requestProjVector(); // the proj vector is CALCULATED (angle is chosen. magnitude of force is clamped 1-3 or chosen, direction is auto-set or chosen. In other words, just angle and 1-3 mag)
     public abstract String toString();
 }

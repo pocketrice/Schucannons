@@ -15,38 +15,20 @@ import static io.github.pocketrice.AnsiCode.ANSI_RESET;
 
 @Getter
 public class HumanPlayer extends Player {
-    UUID playerId;
-
     public HumanPlayer() {
         Model model = new GLTFLoader().load(Gdx.files.internal("models/schucannon.gltf")).scene.model;
+        health = 3;
         rb = new Rigidbody(model);
+        playerId = UUID.randomUUID();
     }
 
     public HumanPlayer(float m, Vector3 loc, Vector3 velo, Vector3 acc) {
         Model model = new GLTFLoader().load(Gdx.files.internal("models/schucannon.gltf")).scene.model;
+        health = 3;
         rb = new Rigidbody(model, m, loc, velo, acc);
+        playerId = UUID.randomUUID();
     }
 
-    @Override
-    public void deductPoint() {
-        points--;
-    }
-
-    @Override
-    public Vector3 requestProjVector() {
-        // TEMP
-        Scanner input = new Scanner(System.in);
-        int x = (int) prompt("Input projectile velocity vector X.", "Not a number or too high!", 0, 100, true);
-        int y = (int) prompt("Input projectile velocity vector Y.", "Not a number or too high!", 0, 100, true);
-        int z = (int) prompt("Input projectile velocity vector Z.", "Not a number or too high!", 0, 100, true);
-        projVector = new Vector3(x,y,z);
-        return projVector;
-    }
-
-    @Override
-    public String toString() {
-        return "Player " + playerId;
-    }
 
     public static String prompt(String message, String errorMessage, String[] bounds, boolean lineMode, boolean isCaseSensitive) // <+> APM
     {
@@ -117,5 +99,25 @@ public class HumanPlayer extends Player {
                 System.out.println(ANSI_RED + errorMessage + ANSI_RESET);
             }
         }
+    }
+
+    @Override
+    public void deductHealth() {
+        health--;
+    }
+
+    @Override
+    public void requestProjVector() {
+        // TEMP
+        Scanner input = new Scanner(System.in);
+        int x = (int) prompt("Input projectile velocity vector X.", "Not a number or too high!", 0, 100, true);
+        int y = (int) prompt("Input projectile velocity vector Y.", "Not a number or too high!", 0, 100, true);
+        int z = (int) prompt("Input projectile velocity vector Z.", "Not a number or too high!", 0, 100, true);
+        projVector = new Vector3(x,y,z);
+    }
+
+    @Override
+    public String toString() {
+        return "Human player " + (playerName.isEmpty() ? playerId : playerName);
     }
 }

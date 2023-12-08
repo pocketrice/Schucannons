@@ -1,21 +1,18 @@
 package io.github.pocketrice;
 
-import com.badlogic.gdx.math.Vector3;
-
 public class SpectatorPlayer extends Player {
 
     @Override
-    public void deductPoint() {
+    public void deductHealth() {
 
     }
 
     @Override
-    public Vector3 requestProjVector() {
-        return null;
+    public void requestProjVector() {
     }
 
     @Override
     public String toString() {
-        return null;
+        return "Spectator " + (playerName.isEmpty() ? playerId : playerName);
     }
 }

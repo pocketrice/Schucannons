@@ -57,13 +57,7 @@ public class Rigidbody extends Physicable {
         acceleration.add(vec3);
     }
 
-    @Override
-    public void update(float t) {
-        forces.forEach(f -> f.apply(this, t)); // apply forces for given t
-        velocity.add(acceleration); // update velocity, since acc is already scaled for t, no need to do so (bs solution??)
-        location.add(velocity); // update loc
-        mi.calculateBoundingBox(bb); // recalc bounding box (NOT efficient. Why???)
-    }
+
 
 
     public void handleCollision(Rigidbody other) {
@@ -92,5 +86,13 @@ public class Rigidbody extends Physicable {
     // Shift apart by the scaled-up separation vector
     public static void moveBoundingBox(BoundingBox box, Vector3 sepVec) {
         box.set(box.getMin(new Vector3()).add(sepVec), box.getMax(new Vector3()).add(sepVec));
+    }
+
+    @Override
+    public void update(float t) {
+        forces.forEach(f -> f.apply(this, t)); // apply forces for given t
+        velocity.add(acceleration); // update velocity, since acc is already scaled for t, no need to do so (bs solution??)
+        location.add(velocity); // update loc
+        mi.calculateBoundingBox(bb); // recalc bounding box (NOT efficient. Why???)
     }
 }

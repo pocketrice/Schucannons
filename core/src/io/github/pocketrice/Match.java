@@ -1,12 +1,17 @@
 package io.github.pocketrice;
 
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.utils.Timer;
 import io.github.pocketrice.Prysm.ForceConstant;
 import lombok.Getter;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+
+import static io.github.pocketrice.AnsiCode.*;
 
 public class Match implements Comparable<Match> {
 
@@ -17,7 +22,7 @@ public class Match implements Comparable<Match> {
     UUID matchId;
 
     @Getter
-    boolean isEnded, isFull;
+    boolean isFull;
     @Getter
     int turnCount;
     @Getter
@@ -37,18 +42,34 @@ public class Match implements Comparable<Match> {
         gameState = GameState.AWAIT;
         matchId = UUID.randomUUID();
 
-        isEnded = false;
         isFull = (curr instanceof HumanPlayer && oppo instanceof HumanPlayer);
         turnCount = 0;
         waitTime = 0L;
     }
 
-    public GameState determineState() {
-        return (isEnded) ? GameState.ENDED : GameState.RUNNING; // todo: more state implementation OR remove
+    public void updateState() { // force await if still await (should not be called during that phase anyway), or check for ended.
+        if (gameState == GameState.AWAIT) return;
+        if (turnCount > 10 || currentPlayer.health <= 0 || oppoPlayer.health <= 0) {
+            gameState = GameState.ENDED;
+        }
     }
 
     public void start() {
-        // go
+        gameState = GameState.RUNNING;
+        System.out.println(ANSI_BLUE + "Match started.\n\n" + ANSI_RESET);
+        while (turnCount < 10) {
+            turnCount++;
+            System.out.println("Turn " + turnCount + " started.");
+            System.out.print(ANSI_PURPLE);
+            runTurn();
+
+            System.out.print("\n\n" + ANSI_YELLOW);
+            runTurn();
+            System.out.print(ANSI_RESET);
+            System.out.println("◈ Turn " + turnCount + " ended.");
+            System.out.println(currentPlayer + " - " + currentPlayer.health + " / " + oppoPlayer + " - " + oppoPlayer.health);
+            System.out.println("\n\n\n\n");
+        }
     }
 
     public Vector3 projMot(Vector3 projVec, Vector3 currLoc) {
@@ -65,7 +86,7 @@ public class Match implements Comparable<Match> {
         float x = projVec.x * t;
         float z = projVec.z * t;
 
-        return currLoc.add(x,0f,z);
+        return currLoc.cpy().add(x,0f,z);
     }
 
     public boolean isHit() {
@@ -114,14 +135,27 @@ public class Match implements Comparable<Match> {
     public void runTurn() {
         // GAME LOGIC!
         currentPlayer.requestProjVector();
-        Vector3 projVec = currentPlayer.getProjVector();
+        long timestamp = System.currentTimeMillis();
+        Vector3 projVec = truncVec(currentPlayer.getProjVector(), 2);
+        Vector3 projLoc = truncVec(currentPlayer.rb.getLocation(), 2);
+        Vector3 oppoLoc = truncVec(oppoPlayer.rb.getLocation(), 2);
+        Vector3 projMot = truncVec(projMot(projVec, projLoc), 2);
 
+        System.out.println(currentPlayer + " chose vector " + projVec + " from " + projLoc + ", landing at " + projMot + ".");
+        System.out.println("Opponent " + oppoPlayer + " sits at " + oppoPlayer.rb.getLocation() + ".");
         gameEnv.animTurn();
 
-        if (isHit()) oppoPlayer.deductPoint();
+        if (isHit()) {
+            oppoPlayer.deductHealth();
+            System.out.println("Hit!");
+        }
+        else
+            System.out.println("Miss. You were off by " + truncate(oppoLoc.dst(projMot), 2) + "u.");
 
+        System.out.println("◇ Turn phase ended. Took " + truncate(msSinceEpoch() - timestamp, 2) + " ms.");
+        updateState();
         sendData();
-        if (isEnded)
+        if (gameState == GameState.ENDED)
             endMatch();
         else {
             if (!(oppoPlayer instanceof BotPlayer) || !((BotPlayer) oppoPlayer).isDummy()) { // dummy bots don't take a turn (CHECK THIS)
@@ -137,8 +171,7 @@ public class Match implements Comparable<Match> {
     }
 
     public void endMatch() {
-        System.out.println("Match ended.");
-        isEnded = true;
+        System.out.println("❖ Match ended. Final score: " + currentPlayer + "'s " + currentPlayer.health + " / " + oppoPlayer + "'s " + oppoPlayer.health);
     }
 
     @Override
@@ -147,7 +180,24 @@ public class Match implements Comparable<Match> {
     }
 
     public void dispose() {
+        gameEnv.dispose();
+    }
 
+    // Returns milliseconds since 0:00 1/1/1970 (Unix epoch).
+    // @param N/A
+    // @return milliseconds since Unix epoch (0:00 1/1/1970)
+    public static long msSinceEpoch() { // unix epoch = 1/1/1970
+        return System.currentTimeMillis();
+    }
+
+    public static float truncate(float value, int mantissa) // <+> APM
+    {
+        return (float) BigDecimal.valueOf(value).setScale(mantissa, RoundingMode.HALF_EVEN).doubleValue();
+    }
+
+    public static Vector3 truncVec(Vector3 vec, int mantissa) {
+        Vector3 copy = vec.cpy(); // Avoid modifying original vec.
+        return vec.set(truncate(copy.x, mantissa), truncate(copy.y, mantissa), truncate(copy.z, mantissa));
     }
 
     public enum PlayerType {

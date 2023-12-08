@@ -1,6 +1,7 @@
 package io.github.pocketrice;
 
 import com.badlogic.gdx.ApplicationAdapter;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FillViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
@@ -16,9 +17,12 @@ public class App extends ApplicationAdapter {
 
 	@Override
 	public void create() {
-		match = new Match(new HumanPlayer(), new HumanPlayer(), new ArrayList<>());
+		match = new Match(new HumanPlayer(3f, new Vector3(3f,0,3f), Vector3.Zero, Vector3.Zero), BotPlayer.FILLER, new ArrayList<>());
+		match.oppoPlayer.setPlayerName("Gorb");
+		match.currentPlayer.setPlayerName("Anna");
 		gameEnv = new GameEnvironment(match);
 		vp = new FillViewport(VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+		match.start();
 	}
 
 	@Override
