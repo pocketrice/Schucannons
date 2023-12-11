@@ -66,6 +66,8 @@ project(":core") {
         api "com.badlogicgames.gdx:gdx-ai:$aiVersion"
         api "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
         api "com.github.mgsx-dev.gdx-gltf:gltf:$gltfVersion"
+        implementation 'org.apache.commons:commons-text:1.11.0'
+        implementation 'com.github.javafaker:javafaker:1.0.2'
         compileOnly 'org.projectlombok:lombok:1.18.28'
         annotationProcessor 'org.projectlombok:lombok:1.18.28'
     }

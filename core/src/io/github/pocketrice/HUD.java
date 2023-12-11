@@ -26,7 +26,7 @@ public class HUD {
         font.draw(batch, "X: " + projVec.x, 30,30);
         font.draw(batch, "Y: " + projVec.y, 30,60);
         font.draw(batch, "Z: " + projVec.z, 30, 90);
-        System.out.println("HUD OK");
+        //System.out.println("HUD OK");
         batch.end();
     }
 

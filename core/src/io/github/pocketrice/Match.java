@@ -1,9 +1,9 @@
 package io.github.pocketrice;
 
 import com.badlogic.gdx.math.Vector3;
-import com.badlogic.gdx.utils.Timer;
 import io.github.pocketrice.Prysm.ForceConstant;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -21,6 +21,8 @@ public class Match implements Comparable<Match> {
     GameState gameState;
     UUID matchId;
 
+    @Setter
+    String matchName;
     @Getter
     boolean isFull;
     @Getter
@@ -31,21 +33,23 @@ public class Match implements Comparable<Match> {
     public static int MAX_SPECTATORS = 5;
 
     public Match() {
-        this(BotPlayer.FILLER, BotPlayer.FILLER, new ArrayList<>());
+        this(null, null);
     }
 
-    public Match(Player curr, Player oppo, List<SpectatorPlayer> specs) { // likely never to be used; matches shouldn't be pre-populated
+    public Match(Player curr, Player oppo, SpectatorPlayer... specs) { // likely never to be used; matches shouldn't be pre-populated
         currentPlayer = curr;
         oppoPlayer = oppo;
-        spectators = specs;
+        spectators = List.of(specs);
         gameEnv = new GameEnvironment(this);
         gameState = GameState.AWAIT;
         matchId = UUID.randomUUID();
+        matchName = "";
 
         isFull = (curr instanceof HumanPlayer && oppo instanceof HumanPlayer);
         turnCount = 0;
         waitTime = 0L;
     }
+
 
     public void updateState() { // force await if still await (should not be called during that phase anyway), or check for ended.
         if (gameState == GameState.AWAIT) return;
@@ -67,7 +71,7 @@ public class Match implements Comparable<Match> {
             runTurn();
             System.out.print(ANSI_RESET);
             System.out.println("◈ Turn " + turnCount + " ended.");
-            System.out.println(currentPlayer + " - " + currentPlayer.health + " / " + oppoPlayer + " - " + oppoPlayer.health);
+            System.out.println(currentPlayer + " ~ " + currentPlayer.health + "  //  " + oppoPlayer.health + " ~ " + oppoPlayer);
             System.out.println("\n\n\n\n");
         }
     }
@@ -99,7 +103,7 @@ public class Match implements Comparable<Match> {
 
 
     public int playerCount() {
-        return ((currentPlayer instanceof HumanPlayer) ? 1 : 0) + ((oppoPlayer instanceof HumanPlayer) ? 1 : 0) + spectators.size();
+        return ((currentPlayer != null) ? 1 : 0) + ((oppoPlayer != null) ? 1 : 0) + spectators.size();
     }
 
     public void setPlayer(Player player, PlayerType type) {
@@ -130,6 +134,19 @@ public class Match implements Comparable<Match> {
 
     public void refusePlayer(Player p) {
         System.out.println("Match full, cannot be joined"); // handle for player. This has to interact with gui and server.
+    }
+
+    public boolean kickPlayer(Player p) {
+        if (currentPlayer == p) {
+            currentPlayer = null;
+            return true;
+        }
+        else if (oppoPlayer == p) {
+            oppoPlayer = null;
+            return true;
+        }
+        else
+            return spectators.remove((SpectatorPlayer) p);
     }
 
     public void runTurn() {
@@ -172,6 +189,9 @@ public class Match implements Comparable<Match> {
 
     public void endMatch() {
         System.out.println("❖ Match ended. Final score: " + currentPlayer + "'s " + currentPlayer.health + " / " + oppoPlayer + "'s " + oppoPlayer.health);
+        kickPlayer(currentPlayer);
+        kickPlayer(oppoPlayer);
+        spectators.forEach(this::kickPlayer); // avoid list.clear as it's too raw
     }
 
     @Override
@@ -179,6 +199,9 @@ public class Match implements Comparable<Match> {
         return Integer.compare(this.playerCount(), other.playerCount());
     }
 
+    public void render() {
+        gameEnv.render();
+    }
     public void dispose() {
         gameEnv.dispose();
     }
@@ -199,6 +222,19 @@ public class Match implements Comparable<Match> {
         Vector3 copy = vec.cpy(); // Avoid modifying original vec.
         return vec.set(truncate(copy.x, mantissa), truncate(copy.y, mantissa), truncate(copy.z, mantissa));
     }
+
+    @Override
+    public String toString() {
+        return (isFull ? ANSI_PURPLE + "FULL" : (currentPlayer == null || oppoPlayer == null) ? ANSI_GREEN + "OPEN" : ANSI_BLUE + "QUEUED") + " [" + playerCount() + "/2] " + ANSI_RESET + "Match " + (matchName.isEmpty() ? matchId : matchName) + " (" + currentPlayer + ", " + oppoPlayer + (spectators.isEmpty() ? "" : ", " + spectators) + ")";
+    }
+
+    public boolean equals(Match other) {
+        return this.toString().equals(other.toString()); // convenient way to include all comparable data
+    }
+
+
+
+
 
     public enum PlayerType {
         INVALID(-1),
