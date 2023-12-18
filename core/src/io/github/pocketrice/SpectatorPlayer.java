@@ -1,7 +1,14 @@
 package io.github.pocketrice;
 
-public class SpectatorPlayer extends Player {
+public class SpectatorPlayer extends HumanPlayer {
 
+    public SpectatorPlayer(HumanPlayer hp) {
+        super(hp.rb, hp.playerId, hp.playerName);
+    }
+
+    public HumanPlayer convertHuman() {
+        return (HumanPlayer) this;
+    }
     @Override
     public void deductHealth() {
 
@@ -13,6 +20,6 @@ public class SpectatorPlayer extends Player {
 
     @Override
     public String toString() {
-        return "Spectator " + (playerName.isEmpty() ? playerId : playerName);
+        return "SPEC " + (playerName.isEmpty() ? playerId : playerName);
     }
 }

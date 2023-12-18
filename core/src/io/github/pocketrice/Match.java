@@ -1,5 +1,6 @@
 package io.github.pocketrice;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.Vector3;
 import io.github.pocketrice.Prysm.ForceConstant;
 import lombok.Getter;
@@ -39,13 +40,14 @@ public class Match implements Comparable<Match> {
     public Match(Player curr, Player oppo, SpectatorPlayer... specs) { // likely never to be used; matches shouldn't be pre-populated
         currentPlayer = curr;
         oppoPlayer = oppo;
-        spectators = List.of(specs);
+        spectators = new ArrayList<>();
+        spectators.addAll(List.of(specs));
         gameEnv = new GameEnvironment(this);
         gameState = GameState.AWAIT;
         matchId = UUID.randomUUID();
         matchName = "";
 
-        isFull = (curr instanceof HumanPlayer && oppo instanceof HumanPlayer);
+        isFull = false;
         turnCount = 0;
         waitTime = 0L;
     }
@@ -58,9 +60,10 @@ public class Match implements Comparable<Match> {
         }
     }
 
-    public void start() {
+    public void start() throws InterruptedException {
         gameState = GameState.RUNNING;
         System.out.println(ANSI_BLUE + "Match started.\n\n" + ANSI_RESET);
+        render();
         while (turnCount < 10) {
             turnCount++;
             System.out.println("Turn " + turnCount + " started.");
@@ -70,8 +73,8 @@ public class Match implements Comparable<Match> {
             System.out.print("\n\n" + ANSI_YELLOW);
             runTurn();
             System.out.print(ANSI_RESET);
-            System.out.println("◈ Turn " + turnCount + " ended.");
-            System.out.println(currentPlayer + " ~ " + currentPlayer.health + "  //  " + oppoPlayer.health + " ~ " + oppoPlayer);
+            System.out.println("◈ Turn " + turnCount + " ended.\n");
+            System.out.println(currentPlayer + " : " + currentPlayer.health + "    -~-    " + oppoPlayer.health + " : " + oppoPlayer);
             System.out.println("\n\n\n\n");
         }
     }
@@ -111,29 +114,30 @@ public class Match implements Comparable<Match> {
             case CURRENT -> currentPlayer = player;
             case OPPONENT -> oppoPlayer = player;
             case SPECTATOR -> {
-                if (spectators.size() > MAX_SPECTATORS) {
-                    isFull = true;
-                    refusePlayer(player);
-                }
+                if (spectators.size() >= MAX_SPECTATORS)
+                    refusePlayer(player); // Refuse if AFTER full
                 else {
-                    if (player instanceof BotPlayer)
-                        refusePlayer(player);
-                    else
-                        spectators.add((SpectatorPlayer) player);
+                    if (player instanceof BotPlayer) refusePlayer(player);
+                    else spectators.add(((HumanPlayer) player).convertSpec());
                 }
+
+                if (spectators.size() >= MAX_SPECTATORS) isFull = true;
             }
         }
     }
 
-    public void addPlayers(Player[] players) {
-        for (int i = 0; i < players.length; i++) {
-            PlayerType pType = PlayerType.get(Math.min(i,2));
-            setPlayer(players[i], pType);
+    public void addPlayers(Player... players) {
+        for (Player p : players) {
+            PlayerType pType = PlayerType.get(Math.min(playerCount(), 2));
+            setPlayer(p, pType);
         }
     }
 
     public void refusePlayer(Player p) {
+        p.isRefused = true;
         System.out.println("Match full, cannot be joined"); // handle for player. This has to interact with gui and server.
+
+        // TODO: handle if refused (technically should not happen).
     }
 
     public boolean kickPlayer(Player p) {
@@ -149,7 +153,7 @@ public class Match implements Comparable<Match> {
             return spectators.remove((SpectatorPlayer) p);
     }
 
-    public void runTurn() {
+    public void runTurn() throws InterruptedException {
         // GAME LOGIC!
         currentPlayer.requestProjVector();
         long timestamp = System.currentTimeMillis();
@@ -167,7 +171,7 @@ public class Match implements Comparable<Match> {
             System.out.println("Hit!");
         }
         else
-            System.out.println("Miss. You were off by " + truncate(oppoLoc.dst(projMot), 2) + "u.");
+            System.out.println("Miss. You were off by " + truncate(oppoLoc.dst(projMot), 2) + "m.");
 
         System.out.println("◇ Turn phase ended. Took " + truncate(msSinceEpoch() - timestamp, 2) + " ms.");
         updateState();
@@ -187,6 +191,10 @@ public class Match implements Comparable<Match> {
         System.out.println("Packet sent.");
     }
 
+    public String getIdentifier() {
+        return (matchName.isEmpty()) ? matchId.toString() : matchName;
+    }
+
     public void endMatch() {
         System.out.println("❖ Match ended. Final score: " + currentPlayer + "'s " + currentPlayer.health + " / " + oppoPlayer + "'s " + oppoPlayer.health);
         kickPlayer(currentPlayer);
@@ -200,10 +208,15 @@ public class Match implements Comparable<Match> {
     }
 
     public void render() {
-        gameEnv.render();
+        //Gdx.app.postRunnable(() -> {
+            //System.out.println("MATCH RENDER");
+           // gameEnv.render();
+       // });
     }
     public void dispose() {
-        gameEnv.dispose();
+       // Gdx.app.postRunnable(() -> {
+          //  gameEnv.dispose();
+       // });
     }
 
     // Returns milliseconds since 0:00 1/1/1970 (Unix epoch).
@@ -225,7 +238,7 @@ public class Match implements Comparable<Match> {
 
     @Override
     public String toString() {
-        return (isFull ? ANSI_PURPLE + "FULL" : (currentPlayer == null || oppoPlayer == null) ? ANSI_GREEN + "OPEN" : ANSI_BLUE + "QUEUED") + " [" + playerCount() + "/2] " + ANSI_RESET + "Match " + (matchName.isEmpty() ? matchId : matchName) + " (" + currentPlayer + ", " + oppoPlayer + (spectators.isEmpty() ? "" : ", " + spectators) + ")";
+        return (isFull ? ANSI_PURPLE + "FULL" : (currentPlayer == null || oppoPlayer == null) ? ANSI_GREEN + "OPEN" : ANSI_BLUE + "QUEUED") + " [" + playerCount() + "/2] " + "Match " + (matchName.isEmpty() ? matchId : matchName) + ANSI_RESET + " (" + (currentPlayer == null ? "NA" : currentPlayer) + ", " + (oppoPlayer == null ? "NA" : oppoPlayer) + (spectators.isEmpty() ? "" : ", " + spectators) + ")";
     }
 
     public boolean equals(Match other) {
