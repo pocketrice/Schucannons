@@ -2,9 +2,10 @@ package io.github.pocketrice;
 
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
+import io.github.pocketrice.client.SchuGame;
 
-import static io.github.pocketrice.App.VIEWPORT_HEIGHT;
-import static io.github.pocketrice.App.VIEWPORT_WIDTH;
+import static io.github.pocketrice.client.SchuGame.VIEWPORT_HEIGHT;
+import static io.github.pocketrice.client.SchuGame.VIEWPORT_WIDTH;
 
 // Please note that on macOS your application needs to be started with the -XstartOnFirstThread JVM argument
 public class DesktopLauncher {
@@ -15,6 +16,6 @@ public class DesktopLauncher {
 //		config.setHdpiMode(HdpiMode.Pixels);
 		config.setWindowedMode(VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 		config.setResizable(true);
-		new Lwjgl3Application(new App(), config);
+		new Lwjgl3Application(new SchuGame(), config);
 	}
 }
