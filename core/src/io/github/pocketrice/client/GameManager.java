@@ -1,39 +1,51 @@
 package io.github.pocketrice.client;
 
-import com.esotericsoftware.kryonet.Connection;
-import com.esotericsoftware.kryonet.Listener;
 import io.github.pocketrice.server.ServerPayload;
 import io.github.pocketrice.shared.Request;
 import lombok.Getter;
+import lombok.Setter;
 
-import java.util.List;
+import java.util.UUID;
 
 // Does all the nitty-gritty client stuffs. Unpack server payloads, handle interp...
 public class GameManager {
+    @Getter @Setter
     private GameClient client;
+    @Setter
     private GameRenderer grdr;
-
-    @Getter
     private Match match; // This is a local-only compilation of ServerPayloads — for ease of storage.
+    @Getter
+    private String[] matchlist; // temp
 
-    public GameManager(GameClient gc) {
-        client = gc;
+    public GameManager() {
+        match = new Match();
     }
-
-    public void requestMatch() {
+    public void requestMatchlist() {
         client.kryoClient.sendTCP(new Request("GC_matches", null));
-        client.kryoClient.addListener(new Listener() {
-            public void received(Connection con, Object obj) { // todo: need to move this?
-                if (obj instanceof List<?>) {
-                   List<Match> matches = (List<Match>) obj;
-                   match = matches.get(0); // todo: prompt player to pick one.
-                    client.kryoClient.sendTCP(new Request("GC_selMatch", match.matchId));
-                }
-            }
-        });
     }
 
+    public void receiveMatch(Object payload) {
+        match = decompilePayload((ServerPayload) payload);
+    }
 
+    public void receiveMatchId(Object payload) {
+        String[] ids = ((String) payload).split("\\|");
+        match.matchId = UUID.fromString(ids[0]);
+        match.matchName = (ids[1].equals("null")) ? "" : ids[1];
+    }
+
+    public void receiveMatchList(Object payload) {
+        matchlist = ((String) payload).split("\\|");
+    }
+
+    public void sendSelMatch(String mid) {
+        client.kryoClient.sendTCP(new Request("GC_selMatch", mid));
+    }
+
+    public void receiveServerUpdate(Object payload) {
+        decompilePayload((ServerPayload) payload);
+        grdr.update();
+    }
 
     public Match decompilePayload(ServerPayload sp) { // todo: technically pos should be set by GM every frame — need to figure out.
         Player currPlayer = match.currentPlayer = match.getPlayer(sp.getA_playerId());
@@ -48,6 +60,10 @@ public class GameManager {
 
         match.timestamp = sp.getTimestamp();
 
+        return match;
+    }
+
+    public Match getMatchState() {
         return match;
     }
 }

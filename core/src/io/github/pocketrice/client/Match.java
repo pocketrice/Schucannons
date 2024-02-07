@@ -27,7 +27,6 @@ public class Match implements Comparable<Match> {
 
     boolean isFull;
     int turnCount;
-    long waitTime;
 
     public static int MAX_SPECTATORS = 5;
 
@@ -46,7 +45,6 @@ public class Match implements Comparable<Match> {
 
         isFull = false;
         turnCount = 0;
-        waitTime = 0L;
     }
 
 
@@ -144,12 +142,12 @@ public class Match implements Comparable<Match> {
         Vector3 projVec = truncVec(currentPlayer.getProjVector(), 2);
         Vector3 projLoc = truncVec(currentPlayer.rb.getLocation(), 2);
         Vector3 oppoLoc = truncVec(oppoPlayer.rb.getLocation(), 2);
-        Vector3 projMot = truncVec(projMot(projVec, projLoc), 2);
+        Vector3 projMot = Vector3.Zero; //truncVec(projMot(projVec, projLoc), 2); // FIXME
 
         System.out.println(currentPlayer + " chose vector " + projVec + " from " + projLoc + ", landing at " + projMot + ".");
         System.out.println("Opponent " + oppoPlayer + " sits at " + oppoPlayer.rb.getLocation() + ".");
 
-        if (isHit()) {
+        if (true) { //isHit()) { // FIXME
             oppoPlayer.deductHealth();
             System.out.println("Hit!");
         }

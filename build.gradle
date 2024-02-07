@@ -61,12 +61,14 @@ project(":core") {
         api "com.badlogicgames.gdx:gdx-bullet:$gdxVersion"
         api "com.badlogicgames.gdx:gdx-box2d:$gdxVersion"
         api "com.badlogicgames.box2dlights:box2dlights:$box2DLightsVersion"
-        api "com.kotcrab.vis:vis-ui:1.4.11"
-        //api "com.github.MrStahlfelge.gdx-websockets:core:1.1.0"
+        api "com.kotcrab.vis:vis-ui:1.5.3"
         api "com.badlogicgames.gdx:gdx-ai:$aiVersion"
         api "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
         api "com.github.mgsx-dev.gdx-gltf:gltf:$gltfVersion"
         api 'com.github.crykn:kryonet:2.22.8'
+        api 'com.esotericsoftware:kryo:4.0.0'
+        api "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
+        implementation 'de.javakaffee:kryo-serializers:0.45'
         implementation 'org.apache.commons:commons-text:1.11.0'
         implementation 'com.github.javafaker:javafaker:1.0.2'
         compileOnly 'org.projectlombok:lombok:1.18.30'

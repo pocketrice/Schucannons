@@ -1,6 +1,9 @@
 package io.github.pocketrice.client;
 
 import com.esotericsoftware.kryonet.Client;
+import com.esotericsoftware.kryonet.Connection;
+import com.esotericsoftware.kryonet.Listener;
+import io.github.pocketrice.shared.KryoInitialiser;
 import io.github.pocketrice.shared.Request;
 import io.github.pocketrice.shared.Response;
 import io.github.pocketrice.shared.ResponseStatus;
@@ -12,20 +15,23 @@ import java.util.LinkedList;
 
 public class SchuClient extends GameClient {
     String matchId;
+    Player self;
+    GameManager gmgr;
 
 
-    public SchuClient() throws UnknownHostException {
-        this(3074);
+    public SchuClient(GameManager gm) throws UnknownHostException {
+        this(gm, 3074);
     }
 
-    public SchuClient(int port) throws UnknownHostException {
-        this("client-" + InetAddress.getLocalHost(), port);
+    public SchuClient(GameManager gm, int port) throws UnknownHostException {
+        this(gm, "client-" + InetAddress.getLocalHost(), port);
     }
 
-    public SchuClient(String name, int port) {
+    public SchuClient(GameManager gm, String name, int port) {
         clientName = name;
         tcpPort = port;
         kryoClient = new Client();
+        gmgr = gm;
 
         inBuffer = new LinkedList<>();
         outBuffer = new LinkedList<>();
@@ -35,18 +41,48 @@ public class SchuClient extends GameClient {
     }
 
     public int calcClientRate() {
-        ping();
-        return server.getTickRate(); // todo use ping crap to calc something
+        //ping();
+        return 20; // todo: get ping packet and do stuffs
     }
 
     public void start() {
+        KryoInitialiser.registerClasses(kryoClient.getKryo());
 
+        kryoThread = new Thread(() -> {
+            kryoClient.start();
+            kryoClient.addListener(new Listener() {
+                public void received(Connection con, Object obj) {
+                    if (obj instanceof Response rp) {
+                        switch (rp.getMsg()) {
+                            case "GS_matches" -> {
+                                gmgr.receiveMatchList(rp.getPayload());
+                            }
+
+                            case "GS_selMatch" -> {
+                                gmgr.receiveMatch(rp.getPayload());
+                            }
+
+                            case "GS_mid" -> {
+                                gmgr.receiveMatchId(rp.getPayload());
+                            }
+
+                            case "GS_pl" -> {
+                                gmgr.receiveServerUpdate(rp.getPayload());
+                            }
+                        }
+                    }
+                }
+            });
+        });
+
+        kryoThread.setName(this + "-KryoThread");
+        kryoThread.start();
     }
 
     @Override
     public void connect(int timeout, String ipv4, int[] ports) throws IOException {
         kryoClient.connect(timeout, ipv4, ports[0]);
-        kryoClient.sendTCP(new Request("pls thank u", null)); // needed?
+        kryoClient.sendTCP(new Request("GC_connect", null)); // needed?
     }
 
     @Override
@@ -61,13 +97,6 @@ public class SchuClient extends GameClient {
     }
 
     @Override
-    public Request ping() {
-
-        return null;
-    }
-
-
-    @Override
     public void close() {
 
     }
@@ -80,52 +109,22 @@ public class SchuClient extends GameClient {
         kryoClient.sendTCP(pp);
     }
 
-    @Override
-    public boolean cleanBuffers() {
-        int totalCleared = 0;
-
-        while (inBuffer.size() < maxIBufferSize) {
-            inBuffer.removeLast();
-            totalCleared++;
-        }
-
-        while (outBuffer.size() < maxOBufferSize) {
-            outBuffer.removeLast();
-            totalCleared++;
-        }
-
-        return (totalCleared >= 0);
-    }
-
-    @Override
-    public boolean cleanBuffers(int amt) {
-        int totalCleared = 0;
-
-        for (int i = 0; !inBuffer.isEmpty() && i < amt; i++) {
-            inBuffer.removeLast();
-            totalCleared++;
-        }
-
-        for (int i = 0; !outBuffer.isEmpty() && i < amt; i++) {
-            outBuffer.removeLast();
-            totalCleared++;
-        }
-
-        return (totalCleared >= 0);
-    }
 
     @Override
     public PlayerPayload constructPayload() {
-        return null;
+        return new PlayerPayload(self.getIdentifier(), matchId, self.rb.getPos(), self.projVector);
     }
 
     @Override
     public PlayerTurnPayload constructTurnPayload() {
-
+        return new PlayerTurnPayload(self.projVector);
     }
 
     @Override
     public Response receivePayload(Object obj) {
-        return null;
+        inBuffer.addFirst(obj); // Most recent = first
+        cleanBuffers();
+
+        return new Response(ResponseStatus.OK.name(), null);
     }
 }

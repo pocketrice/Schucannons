@@ -1,63 +1,61 @@
 package io.github.pocketrice.client;
 
 import com.badlogic.gdx.Game;
-import com.badlogic.gdx.utils.async.AsyncExecutor;
-import com.badlogic.gdx.utils.async.AsyncResult;
+import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.viewport.FillViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import io.github.pocketrice.client.screens.GameScreen;
-
-import java.util.List;
-import java.util.stream.Collectors;
+import io.github.pocketrice.client.screens.LoadScreen;
+import io.github.pocketrice.client.screens.MenuScreen;
+import io.github.pocketrice.server.DedicatedServer;
+import io.github.pocketrice.server.GameServer;
+import lombok.Getter;
 
 // TODO: AWFUL memory leaks abound, pls fix
 
 public class SchuGame extends Game {
-	private Viewport vp;
 	public static final int VIEWPORT_WIDTH = 960, VIEWPORT_HEIGHT = 880;
+
+	private Viewport vp;
 	private SchuClient sclient;
+	@Getter
 	private GameRenderer grdr;
+	@Getter
 	private GameManager gmgr;
-	private AsyncExecutor async;
-	private AsyncResult<Void> task;
+	private MenuScreen ms;
+	private GameScreen gs;
+	private LoadScreen ls;
+	@Getter
+	private Stage stage;
 
 	@Override
 	public void create() {
-//		match = new Match(new HumanPlayer(3f, new Vector3(3f,0,3f), Vector3.Zero, Vector3.Zero), BotPlayer.FILLER, new ArrayList<>());
-//		match.oppoPlayer.setPlayerName("Gorb");
-//		match.currentPlayer.setPlayerName("Anna");
-//		gameEnv = new GameEnvironment(match);
 		vp = new FillViewport(VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
-		HumanPlayer hp = new HumanPlayer();
-		BotPlayer bp = new BotPlayer();
+		gmgr = new GameManager();
+		grdr = new GameRenderer(gmgr);
 
 		try {
-			sclient = new SchuClient();
+			// for testing purposes
+			GameServer server = new DedicatedServer(3074);
+			server.start();
+
+			sclient = new SchuClient(gmgr);
 			sclient.start();
-			sclient.connect(5000, "192.168.1.64", new int[]{3074});
+			sclient.connect(5000, "localhost", new int[]{3074});
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
 
+		gmgr.setClient(sclient);
+		gmgr.setGrdr(grdr);
 
-
-
-		async = new AsyncExecutor(4);
-		List<String> availableMatchStrs = mm.availableMatches.stream().map(m -> "" + (m.matchName.isEmpty() ? m.matchId : m.matchName)).collect(Collectors.toList());
-		availableMatchStrs.add("AUTO");
-
-		String matchSel = "AUTO";//prompt("Select a match to join, or pick AUTO.", "invalid match identifier or option.", availableMatchStrs.toArray(new String[0]), false, true, true);
-		Match match = (matchSel.equals("AUTO")) ? mm.connectPlayers(hp, bp) : mm.connectPlayers(mm.findMatch(matchSel), hp, bp);
-
-		gmgr = new GameManager(sclient);
-		grdr = new GameRenderer(gmgr);
-
-		setScreen(new GameScreen(this));
+		setScreen(new MenuScreen(this, vp));
 	}
 
 	@Override
 	public void render() {
-		grdr.render();
+		//System.out.println("rend");
+		this.screen.render(0f);
 	}
 	
 	@Override

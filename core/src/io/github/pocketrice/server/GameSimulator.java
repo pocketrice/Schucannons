@@ -33,12 +33,12 @@ public class GameSimulator {
     }
 
 
-
-    public boolean isLegal(Vector3 loc) {
-
-    }
-
-    public Vector3 legalise(Vector3 loc) {
-
-    }
+//
+//    public boolean isLegal(Vector3 loc) {
+//
+//    }
+//
+//    public Vector3 legalise(Vector3 loc) {
+//
+//    }
 }
