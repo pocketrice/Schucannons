@@ -5,30 +5,30 @@ import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
 import io.github.pocketrice.shared.FuzzySearch;
 
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Audiobox {
-    List<Sound> sfxs;
-    List<Music> bgms;
+    Map<String, Sound> sfxs;
+    Map<String, Music> bgms;
 
-    public Audiobox(List<Sound> sfxs, List<Music> bgms) {
-        this.sfxs = new ArrayList<>(sfxs);
-        this.bgms = new ArrayList<>(bgms);
+    public Audiobox() {
+        sfxs = new HashMap<>();
+        bgms = new HashMap<>();
     }
 
     public Sound getFuzzySfx(String name) {
-        FuzzySearch fs = new FuzzySearch(sfxs);
+        FuzzySearch fs = new FuzzySearch(sfxs.keySet());
         String res = fs.getFuzzy(name)[0];
-
-        return sfxs.stream().filter(sfx -> sfx.toString().equals(res)).findFirst().get();
+        return sfxs.get(res);
     }
 
     public Music getFuzzyBgm(String name) {
-        FuzzySearch fs = new FuzzySearch(bgms);
+        FuzzySearch fs = new FuzzySearch(bgms.keySet());
         String res = fs.getFuzzy(name)[0];
 
-        return bgms.stream().filter(bgm -> bgm.toString().equals(res)).findFirst().get();
+        return bgms.get(res);
     }
 
     public void loadAudio(boolean isSfx, String audioFile) {
@@ -36,11 +36,11 @@ public class Audiobox {
 
         if (isSfx) {
             Sound sfx = Gdx.audio.newSound(Gdx.files.internal("audio/" + audioFile));
-            sfxs.add(sfx);
+            sfxs.put(audioFile, sfx);
         } else {
             Music bgm = Gdx.audio.newMusic(Gdx.files.internal("audio/" + audioFile));
             bgm.setLooping(true);
-            bgms.add(bgm);
+            bgms.put(audioFile, bgm);
         }
     }
 
@@ -67,7 +67,7 @@ public class Audiobox {
     }
 
     public static Audiobox of(List<String> sfxs, List<String> bgms) {
-        Audiobox abox = new Audiobox(List.of(), List.of());
+        Audiobox abox = new Audiobox();
         abox.loadAudios(true, sfxs.toArray(new String[0]));
         abox.loadAudios(false, bgms.toArray(new String[0]));
 
@@ -75,7 +75,10 @@ public class Audiobox {
     }
 
     public void dispose() {
-        sfxs.forEach(Sound::dispose);
-        bgms.forEach(Music::dispose);
+        sfxs.values().forEach(Sound::dispose);
+        bgms.values().forEach(Music::dispose);
+
+        sfxs.clear();
+        bgms.clear();
     }
 }

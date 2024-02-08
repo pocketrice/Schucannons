@@ -1,19 +1,15 @@
 package io.github.pocketrice.client;
 
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.math.Vector3;
-import io.github.pocketrice.server.Prysm.Rigidbody;
 import lombok.Getter;
-import net.mgsx.gltf.loaders.gltf.GLTFLoader;
 
 import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.DoubleStream;
 
-import static io.github.pocketrice.client.AnsiCode.*;
+import static io.github.pocketrice.client.AnsiCode.ANSI_RESET;
 
 @Getter
 public class BotPlayer extends Player {
@@ -28,12 +24,10 @@ public class BotPlayer extends Player {
     public BotPlayer(int d, boolean dummy) {
         difficulty = d;
         isDummy = dummy;
-        Model model = new GLTFLoader().load(Gdx.files.internal("models/schucannon.gltf")).scene.model;
         health = 3;
-        rb = new Rigidbody(model);
         playerId = UUID.randomUUID();
         playerName = weightedRandom(new String[]{"Notbot", "Anna", "Heavy Weapons Guy", "Woz", "Jobim", "Jianyao", "Wil", "Mundy", "Lando", "Vinny", "Shogo", "Mugen", "Jar", "Isa", "Jeroo", "Ado", "Hal", "Mark", "Bird", "Onuki", "Minton", "Lorry", "Carton", "Gilbert", "The Legend", "Luya", "Nujabes", "Hubert", "Schudawg"}, new double[0], true);
-
+        pos = new Vector3(0,0,0);
     }
 
 

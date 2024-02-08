@@ -10,13 +10,17 @@ import io.github.pocketrice.shared.FuzzySearch;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 // Manages fonts!
 public class Fontbook {
     List<FreeTypeFontGenerator> ftfs;
+    Map<Integer, List<BitmapFont>> bmfCache;
 
     public Fontbook(FreeTypeFontGenerator... fonts) {
         ftfs = new ArrayList<>(List.of(fonts));
+        bmfCache = new TreeMap<>();
     }
 
     // fuzzy search bc why not. prolly not
@@ -31,13 +35,25 @@ public class Fontbook {
         return ftfs.stream().filter(ftf -> ftf.toString().equals(name)).findFirst().get();
     }
 
-    public BitmapFont getSizedBitmap(FreeTypeFontGenerator ftfg, int fontSize) {
-        FreeTypeFontGenerator.FreeTypeFontParameter ftparam = new FreeTypeFontGenerator.FreeTypeFontParameter();
-        ftparam.size = fontSize;
-        BitmapFont bmf = ftfg.generateFont(ftparam);
-        ftfg.dispose();
+    public BitmapFont getSizedBitmap(String name, int fontSize) {
+        BitmapFont result;
 
-        return bmf;
+        List<BitmapFont> bmfs = bmfCache.getOrDefault(fontSize, List.of());
+        BitmapFont bmf = bmfs.stream().filter(f -> f.toString().contains(name)).findFirst().orElse(null);
+        if (bmf != null) {
+            result = bmf;
+        } else {
+            FreeTypeFontGenerator ftfg = getFuzzyFont(name);
+            FreeTypeFontGenerator.FreeTypeFontParameter ftparam = new FreeTypeFontGenerator.FreeTypeFontParameter();
+            ftparam.size = fontSize;
+            result = ftfg.generateFont(ftparam);
+
+            bmfCache.putIfAbsent(fontSize, new ArrayList<>());
+            bmfCache.get(fontSize).add(result);
+        }
+
+        // tip: DON'T dispose the ftfg yet. It is still stored in the ftfs list, so it disappears from memory and you get a lovely lil' SEGSIGV. fun :D
+        return result;
     }
 
 
@@ -46,7 +62,7 @@ public class Fontbook {
     }
 
     public void draw(String font, int fontSize, SpriteBatch batch, CharSequence text, Vector2 loc, float width) {
-        BitmapFont bmf = getSizedBitmap(getFuzzyFont(font), fontSize);
+        BitmapFont bmf = getSizedBitmap(font, fontSize);
         bmf.draw(batch, text, loc.x, loc.y, width, 0, true);
     }
 
@@ -55,7 +71,7 @@ public class Fontbook {
     }
 
     public void formatDraw(String font, int fontSize, Color color, SpriteBatch batch, CharSequence text, Vector2 loc, float width) {
-        BitmapFont bmf = getSizedBitmap(getFuzzyFont(font), fontSize);
+        BitmapFont bmf = getSizedBitmap(font, fontSize);
 
         Color oldCol = bmf.getColor();
         bmf.setColor(color);
@@ -85,5 +101,6 @@ public class Fontbook {
 
     public void dispose() {
         ftfs.forEach(FreeTypeFontGenerator::dispose);
+        ftfs.clear();
     }
 }

@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.assets.loaders.ModelLoader;
 import com.badlogic.gdx.files.FileHandle;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.PerspectiveCamera;
@@ -18,18 +19,17 @@ import com.badlogic.gdx.graphics.g3d.loader.ObjLoader;
 import com.badlogic.gdx.math.Quaternion;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
-import com.badlogic.gdx.scenes.scene2d.Actor;
-import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
-import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import io.github.pocketrice.client.Audiobox;
 import io.github.pocketrice.client.Fontbook;
 import io.github.pocketrice.client.SchuGame;
 import io.github.pocketrice.client.ui.SchuButton;
+import io.github.pocketrice.shared.EasingFunction;
+import io.github.pocketrice.shared.LinkInterlerper;
 
 import java.util.Arrays;
 import java.util.List;
@@ -45,6 +45,10 @@ public class MenuScreen extends ScreenAdapter {
     Fontbook fontbook;
     Audiobox audiobox;
     SchuGame game;
+
+    List<SchuButton> schubs;
+    Table matchlistBtns;
+    boolean isUILoaded; // TEMP
 
 
     public static final Model PANO_MODEL = loadModel(Gdx.files.internal("models/schupano.obj"));
@@ -65,11 +69,18 @@ public class MenuScreen extends ScreenAdapter {
         env.add(new DirectionalLight().set(0.6f, 0.3f, 1.1f, 1f, -0.5f, 0f));
         env.add(new DirectionalLight().set(0.8f, 0.3f, 0.4f, 0f, 0.5f, 0f));
 
-        fontbook = Fontbook.of("tf2segundo.ttf", "tinyislanders.ttf");
-        audiobox = Audiobox.of(List.of("buttonclick.ogg", "buttonclickrelease.ogg"), List.of());
+        fontbook = Fontbook.of("tinyislanders.ttf", "koholint.ttf");
+        audiobox = Audiobox.of(List.of("buttonclick.ogg", "buttonclickrelease.ogg", "buttonrollover.ogg", "hint.ogg", "notification_alert.ogg"), List.of());
         game = sg;
         stage = new Stage(vp);
+
+        matchlistBtns = new Table();
+        matchlistBtns.setPosition(200, 500);
+        stage.addActor(matchlistBtns);
+
+
         Gdx.input.setInputProcessor(stage);
+        isUILoaded = false;
     }
 
     @Override
@@ -92,34 +103,38 @@ public class MenuScreen extends ScreenAdapter {
         if (game.getGmgr().getMatchlist() == null) { // todo: only request once
             game.getGmgr().requestMatchlist();
         } else {
-            List<SchuButton> schubs = Arrays.stream(game.getGmgr().getMatchlist()).map(m -> new SchuButton(m, new Skin(Gdx.files.internal("skins/onett/skin/terra-mother-ui.json")))).toList();
-            Table table = new Table();
-            schubs.forEach(schub -> {
-                schub.addListener(new ClickListener() {
-                    @Override
-                    public void clicked(InputEvent event, float x, float y) {
-                        audiobox.playSfx("buttonclick", 1f);
-                    }
-
-                    @Override
-                    public void exit(InputEvent event, float x, float y, int pointer, Actor toActor) {
-                        audiobox.playSfx("slide_down", 1f);
-                    }
-
-                    @Override
-                    public void enter(InputEvent event, float x, float y, int pointer, Actor fromActor) {
-                        audiobox.playSfx("slide_up", 1f);
-                    }
+            if (!isUILoaded) {
+                schubs = Arrays.stream(game.getGmgr().getMatchlist()).map(m -> new SchuButton(game.getGmgr(), audiobox, fontbook, m, new Skin(Gdx.files.internal("skins/onett/skin/terra-mother-ui.json")))).toList();
+                schubs.forEach(schub -> {
+                    schub.getTbs().font = fontbook.getSizedBitmap("koholint", 21);
+                    schub.getTbs().fontColor = Color.valueOf("#afafdd");
+                    schub.setStyle(schub.getTbs());
+                    matchlistBtns.add(schub).align(Align.left).padBottom(8f);
+                    matchlistBtns.row();
                 });
-                table.add(schub).align(Align.left).padBottom(8f);
-                table.row();
-            });
-            stage.addActor(table);
-            table.setPosition(200, 500);
-            table.draw(sprBatch, 1f);
-            //fontbook.draw("tinyislanders", sprBatch, Arrays.toString(game.getGmgr().getMatchlist()), new Vector2(10, 600));
+
+                System.out.println("btns loaded stupid");
+                if (!schubs.get(0).getText().isEmpty()) isUILoaded = true;
+            }
         }
+
+        if (isUILoaded) {
+            schubs.forEach((schub) -> {
+                LinkInterlerper<Color, ? super SchuButton> interlerpColor = schub.getInterlerpColor();
+                LinkInterlerper<Integer, ? super SchuButton> interlerpFontSize = schub.getInterlerpFontSize();
+                if (interlerpFontSize.isInterlerp()) {
+                    interlerpFontSize.step(0.04f, EasingFunction.EASE_IN_OUT_SINE);
+                }
+
+                if (interlerpColor.isInterlerp()) {
+                    interlerpColor.step(0.04f, EasingFunction.EASE_IN_OUT_SINE);
+                }
+            });
+        }
+
+        matchlistBtns.draw(sprBatch, 1f);
         sprBatch.end();
+        stage.act();
     }
 
     @Override

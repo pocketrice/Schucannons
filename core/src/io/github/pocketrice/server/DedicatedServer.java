@@ -6,6 +6,7 @@ import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
 import io.github.pocketrice.client.GameClient;
 import io.github.pocketrice.client.Match;
+import io.github.pocketrice.client.Player;
 import io.github.pocketrice.client.PlayerPayload;
 import io.github.pocketrice.server.Prysm.ForceConstant;
 import io.github.pocketrice.shared.KryoInitialiser;
@@ -14,7 +15,6 @@ import io.github.pocketrice.shared.Response;
 import io.github.pocketrice.shared.ResponseStatus;
 
 import java.io.IOException;
-import java.net.UnknownHostException;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -22,13 +22,13 @@ import java.util.stream.Collectors;
 public class DedicatedServer extends GameServer {
     Matchmaker mm;
     GameSimulator gsim;
-    Map<String, Set<Connection>> clientMap; // todo: move to Matchmaker??
+    Map<String, Set<Connection>> clientMap;
 
-    public DedicatedServer() throws UnknownHostException {
+    public DedicatedServer() {
         this(3074);
     }
 
-    public DedicatedServer(int port) throws UnknownHostException {
+    public DedicatedServer(int port) {
         this("", port);
     }
 
@@ -80,16 +80,20 @@ public class DedicatedServer extends GameServer {
                     if (obj instanceof Request rq) {
                         switch (rq.getMsg()) {
                             case "GC_matches" -> {
-                                kryoServer.sendToTCP(con.getID(), new Response("GS_matches", mm.matches.stream().map(Match::getIdentifier).collect(Collectors.joining("|"))));
+                                kryoServer.sendToTCP(con.getID(), new Response("GS_matches", mm.matches.stream().map(Match::toString).collect(Collectors.joining("&"))));
                             }
 
                             case "GC_selMatch" -> {
-                                String mid = (String) rq.getPayload();
-                                clientMap.putIfAbsent(mid, new HashSet<>());
-                                clientMap.get(mid).add(con);
-                                kryoServer.sendToTCP(con.getID(), new Response("GS_selMatch", constructPayload(mid)));
+                                Object[] payload = (Object[]) rq.getPayload();
+                                String mid = (String) payload[0];
+                                Player player = (Player) payload[1];
 
                                 Match m = mm.findMatch(mid);
+                                m.addPlayers(player);
+                                clientMap.putIfAbsent(mid, new HashSet<>());
+                                clientMap.get(mid).add(con);
+
+                                kryoServer.sendToTCP(con.getID(), new Response("GS_selMatch", constructPayload(mid)));
                                 kryoServer.sendToTCP(con.getID(), new Response("GS_mid", m.getMatchId() + "|" + m.getMatchName()));
                             }
                         }

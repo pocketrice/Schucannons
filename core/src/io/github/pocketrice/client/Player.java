@@ -2,7 +2,6 @@ package io.github.pocketrice.client;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Vector3;
-import io.github.pocketrice.server.Prysm.Rigidbody;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -11,21 +10,17 @@ import java.util.UUID;
 
 @Getter
 public abstract class Player {
-
     @Setter
     int health = 0;
-
     @Setter
     Color playerColor;
     @Setter
-    Rigidbody rb;
-    @Setter
-    Vector3 projVector;
-
+    Vector3 projVector, pos;
     UUID playerId;
     @Setter
     String playerName;
     boolean isRefused;
+
 
     public abstract void deductHealth();
     public abstract String getIdentifier();

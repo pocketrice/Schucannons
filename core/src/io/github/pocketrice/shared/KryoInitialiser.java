@@ -4,6 +4,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.esotericsoftware.kryo.Kryo;
 import de.javakaffee.kryoserializers.UUIDSerializer;
+import io.github.pocketrice.client.HumanPlayer;
 import io.github.pocketrice.client.PlayerPayload;
 import io.github.pocketrice.client.PlayerTurnPayload;
 import io.github.pocketrice.server.ServerPayload;
@@ -26,5 +27,8 @@ public class KryoInitialiser {
         kryo.register(ServerPayload.class, new ServerPayloadSerialiser());
         kryo.register(PlayerPayload.class, new PlayerPayloadSerialiser());
         kryo.register(PlayerTurnPayload.class, new PlayerTurnPayloadSerialiser());
+
+        kryo.register(Object[].class);
+        kryo.register(HumanPlayer.class);
     }
 }

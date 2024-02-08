@@ -5,6 +5,7 @@ import io.github.pocketrice.shared.Request;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.Arrays;
 import java.util.UUID;
 
 // Does all the nitty-gritty client stuffs. Unpack server payloads, handle interp...
@@ -29,17 +30,18 @@ public class GameManager {
     }
 
     public void receiveMatchId(Object payload) {
-        String[] ids = ((String) payload).split("\\|");
+        String[] ids = ((String) payload).split("&");
+        System.out.println(Arrays.toString(ids));
         match.matchId = UUID.fromString(ids[0]);
         match.matchName = (ids[1].equals("null")) ? "" : ids[1];
     }
 
     public void receiveMatchList(Object payload) {
-        matchlist = ((String) payload).split("\\|");
+        matchlist = ((String) payload).split("&");
     }
 
     public void sendSelMatch(String mid) {
-        client.kryoClient.sendTCP(new Request("GC_selMatch", mid));
+        client.kryoClient.sendTCP(new Request("GC_selMatch", new Object[]{mid, ((SchuClient) client).self}));
     }
 
     public void receiveServerUpdate(Object payload) {
@@ -51,10 +53,14 @@ public class GameManager {
         Player currPlayer = match.currentPlayer = match.getPlayer(sp.getA_playerId());
         Player oppoPlayer = match.oppoPlayer = match.getPlayer(sp.getB_playerId());
 
-        currPlayer.setProjVector(sp.getA_projMotVec());
-        currPlayer.rb.setLocation(sp.getA_cannonPos());
-        oppoPlayer.setProjVector(sp.getB_projMotVec());
-        oppoPlayer.rb.setLocation(sp.getB_cannonPos());
+        if (currPlayer != null) {
+            currPlayer.setProjVector(sp.getA_projMotVec());
+            currPlayer.setPos(sp.getA_cannonPos());
+        }
+        if (oppoPlayer != null) {
+            oppoPlayer.setProjVector(sp.getB_projMotVec());
+            oppoPlayer.setPos(sp.getB_cannonPos());
+        }
 
         match.cballPos = sp.getCballPos();
 

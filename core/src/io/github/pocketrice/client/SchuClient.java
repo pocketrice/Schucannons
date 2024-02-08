@@ -13,6 +13,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.LinkedList;
 
+
 public class SchuClient extends GameClient {
     String matchId;
     Player self;
@@ -32,6 +33,7 @@ public class SchuClient extends GameClient {
         tcpPort = port;
         kryoClient = new Client();
         gmgr = gm;
+        self = new HumanPlayer();
 
         inBuffer = new LinkedList<>();
         outBuffer = new LinkedList<>();
@@ -112,7 +114,7 @@ public class SchuClient extends GameClient {
 
     @Override
     public PlayerPayload constructPayload() {
-        return new PlayerPayload(self.getIdentifier(), matchId, self.rb.getPos(), self.projVector);
+        return new PlayerPayload(self.getIdentifier(), matchId, self.getPos(), self.projVector);
     }
 
     @Override

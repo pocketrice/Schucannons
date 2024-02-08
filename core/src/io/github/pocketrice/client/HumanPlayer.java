@@ -1,12 +1,8 @@
 package io.github.pocketrice.client;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.math.Vector3;
-import io.github.pocketrice.server.Prysm.Rigidbody;
 import io.github.pocketrice.shared.FuzzySearch;
 import lombok.Getter;
-import net.mgsx.gltf.loaders.gltf.GLTFLoader;
 
 import java.util.List;
 import java.util.Scanner;
@@ -20,19 +16,14 @@ public class HumanPlayer extends Player {
     Boolean isVectorMode; // boxed = bad, valve pls fix
 
     public HumanPlayer() {
-        this(new Rigidbody(new GLTFLoader().load(Gdx.files.internal("models/schucannon.gltf")).scene.model));
+        this(UUID.randomUUID(), weightedRandom(new String[]{"Notbot", "Anna", "Heavy Weapons Guy", "Scott", "Jianyao", "Wil", "Mundy", "Lando", "Vinny", "Shogo", "Wario", "Lyra", "Ado", "Hal", "Mark", "Bird", "Korb", "Minton", "Lorry", "Heathcliff", "Gilbert", "The Legend", "Plonko", "Plinko", "Hubert", "Pauling"}, new double[0], true));
     }
 
-    public HumanPlayer(Rigidbody rb) {
-        this(rb, UUID.randomUUID(), weightedRandom(new String[]{"Notbot", "Anna", "Heavy Weapons Guy", "Scott", "Jianyao", "Wil", "Mundy", "Lando", "Vinny", "Shogo", "Wario", "Lyra", "Ado", "Hal", "Mark", "Bird", "Korb", "Minton", "Lorry", "Heathcliff", "Gilbert", "The Legend", "Plonko", "Plinko", "Hubert", "Pauling"}, new double[0], true));
-    }
-
-    public HumanPlayer(Rigidbody rb, UUID uuid, String name) {
-        Model model = new GLTFLoader().load(Gdx.files.internal("models/schucannon.gltf")).scene.model;
+    public HumanPlayer(UUID uuid, String name) {
         health = 3;
-        this.rb = rb;
         playerId = uuid;
         playerName = name;
+        pos = new Vector3(0,0,0);
     }
 
     public SpectatorPlayer convertSpec() {

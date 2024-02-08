@@ -3,7 +3,7 @@ package io.github.pocketrice.client;
 public class SpectatorPlayer extends HumanPlayer {
 
     public SpectatorPlayer(HumanPlayer hp) {
-        super(hp.rb, hp.playerId, hp.playerName);
+        super(hp.playerId, hp.playerName);
     }
 
     public HumanPlayer convertHuman() {

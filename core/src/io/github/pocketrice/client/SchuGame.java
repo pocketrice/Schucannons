@@ -54,12 +54,13 @@ public class SchuGame extends Game {
 
 	@Override
 	public void render() {
-		//System.out.println("rend");
-		this.screen.render(0f);
+		screen.render(0f);
 	}
 	
 	@Override
 	public void dispose() {
 		grdr.dispose();
+		screen.dispose();
+		sclient.disconnect();
 	}
 }

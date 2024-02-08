@@ -26,10 +26,10 @@ public class GameSimulator {
 
     public boolean isHit(Player currPlayer, Player oppoPlayer) {
         Vector3 projVec = currPlayer.getProjVector();
-        Vector3 currentLoc = currPlayer.getRb().getLocation();
-        Vector3 projMot = projMot(projVec, currentLoc);
-
-        return projMot.equals(oppoPlayer.getRb().getLocation());
+      //  Vector3 currentLoc = currPlayer.getRb().getLocation();
+       // Vector3 projMot = projMot(projVec, currentLoc);
+return true;
+       // return projMot.equals(oppoPlayer.getRb().getLocation());
     }
 
 

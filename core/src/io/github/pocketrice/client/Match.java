@@ -97,8 +97,9 @@ public class Match implements Comparable<Match> {
 
     public Player getPlayer(String pid) {
         Player p = null;
-        if (currentPlayer.getIdentifier().equals(pid)) p = currentPlayer;
-        else if (oppoPlayer.getIdentifier().equals(pid)) p = oppoPlayer;
+
+        if (currentPlayer != null && currentPlayer.getIdentifier().equals(pid)) p = currentPlayer;
+        else if (oppoPlayer != null && oppoPlayer.getIdentifier().equals(pid)) p = oppoPlayer;
         else {
             for (SpectatorPlayer sp : spectators) {
                 if (sp.getIdentifier().equals(pid)) p = sp;
@@ -140,19 +141,19 @@ public class Match implements Comparable<Match> {
         currentPlayer.requestProjVector();
         long timestamp = System.currentTimeMillis();
         Vector3 projVec = truncVec(currentPlayer.getProjVector(), 2);
-        Vector3 projLoc = truncVec(currentPlayer.rb.getLocation(), 2);
-        Vector3 oppoLoc = truncVec(oppoPlayer.rb.getLocation(), 2);
-        Vector3 projMot = Vector3.Zero; //truncVec(projMot(projVec, projLoc), 2); // FIXME
-
-        System.out.println(currentPlayer + " chose vector " + projVec + " from " + projLoc + ", landing at " + projMot + ".");
-        System.out.println("Opponent " + oppoPlayer + " sits at " + oppoPlayer.rb.getLocation() + ".");
+//        Vector3 projLoc = truncVec(currentPlayer.rb.getLocation(), 2);
+//        Vector3 oppoLoc = truncVec(oppoPlayer.rb.getLocation(), 2);
+//        Vector3 projMot = Vector3.Zero; //truncVec(projMot(projVec, projLoc), 2); // FIXME
+//
+//        System.out.println(currentPlayer + " chose vector " + projVec + " from " + projLoc + ", landing at " + projMot + ".");
+//        System.out.println("Opponent " + oppoPlayer + " sits at " + oppoPlayer.rb.getLocation() + ".");
 
         if (true) { //isHit()) { // FIXME
             oppoPlayer.deductHealth();
             System.out.println("Hit!");
         }
         else
-            System.out.println("Miss. You were off by " + truncate(oppoLoc.dst(projMot), 2) + "m.");
+         //   System.out.println("Miss. You were off by " + truncate(oppoLoc.dst(projMot), 2) + "m.");
 
         System.out.println("◇ Turn phase ended. Took " + truncate(msSinceEpoch() - timestamp, 2) + " ms.");
         updateState();
@@ -202,7 +203,8 @@ public class Match implements Comparable<Match> {
 
     @Override
     public String toString() {
-        return (isFull ? ANSI_PURPLE + "FULL" : (currentPlayer == null || oppoPlayer == null) ? ANSI_GREEN + "OPEN" : ANSI_BLUE + "QUEUED") + " [" + playerCount() + "/2] " + "Match " + (matchName.isEmpty() ? matchId : matchName) + ANSI_RESET + " (" + (currentPlayer == null ? "NA" : currentPlayer) + ", " + (oppoPlayer == null ? "NA" : oppoPlayer) + (spectators.isEmpty() ? "" : ", " + spectators) + ")";
+        //return (isFull ? ANSI_PURPLE + "FULL" : (currentPlayer == null || oppoPlayer == null) ? ANSI_GREEN + "OPEN" : ANSI_BLUE + "QUEUED") + " [" + playerCount() + "/2] " + "Match " +  getIdentifier() + ANSI_RESET + " (" + (currentPlayer == null ? "NA" : currentPlayer) + ", " + (oppoPlayer == null ? "NA" : oppoPlayer) + (spectators.isEmpty() ? "" : ", " + spectators) + ")";
+        return getIdentifier() + "|[" + playerCount() + "/2]|" + (currentPlayer == null ? "NA" : currentPlayer) + ", " + (oppoPlayer == null ? "NA" : oppoPlayer) + (spectators.isEmpty() ? "" : ", " + spectators) + ")";
     }
 
     public boolean equals(Match other) {

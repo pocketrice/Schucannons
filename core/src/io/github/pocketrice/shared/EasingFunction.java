@@ -97,7 +97,7 @@ public enum EasingFunction {
     });
 
 
-    public double getValue(double t) {
+    public double apply(double t) {
         return this.formula.apply(t);
     }
 

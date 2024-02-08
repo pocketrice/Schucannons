@@ -10,14 +10,14 @@ import lombok.Setter;
 import java.util.LinkedList;
 import java.util.List;
 
+@Getter
 public class Rigidbody extends Physicable {
-    ModelInstance mi;
     List<Force> forces;
+    ModelInstance mi;
 
-    @Getter @Setter
+    @Setter
     Vector3 location, velocity, acceleration;
 
-    @Getter
     float mass;
 
 //    public Rigidbody(Model model, BoundingBox bb, float m, Force... f) {
