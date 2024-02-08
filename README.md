@@ -15,8 +15,10 @@
 
 <p align="center">
   <br>
-LibGDX projectile motion simulator and teaching tool for IB CS HL Y2 project.
+LibGDX networked projectile motion game and teaching tool for IB CS HL Y2 project.
   <br><br>
 
 
 ![cycles_render](https://github.com/PocketRice/Schucannons/assets/79682953/3d182703-4fb2-4330-b22d-5b84f8dfde0c)
+![ig_menu](https://github.com/PocketRice/Schucannons/assets/79682953/e3070efd-838f-4280-b7c2-4b3daf5050de)
+![ig_load](https://github.com/PocketRice/Schucannons/assets/79682953/d3e56eef-448b-4f73-bc20-6a2fef394993)
