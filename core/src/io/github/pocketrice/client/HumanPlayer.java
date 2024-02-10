@@ -16,7 +16,7 @@ public class HumanPlayer extends Player {
     Boolean isVectorMode; // boxed = bad, valve pls fix
 
     public HumanPlayer() {
-        this(UUID.randomUUID(), weightedRandom(new String[]{"Notbot", "Anna", "Heavy Weapons Guy", "Scott", "Jianyao", "Wil", "Mundy", "Lando", "Vinny", "Shogo", "Wario", "Lyra", "Ado", "Hal", "Mark", "Bird", "Korb", "Minton", "Lorry", "Heathcliff", "Gilbert", "The Legend", "Plonko", "Plinko", "Hubert", "Pauling"}, new double[0], true));
+        this(UUID.randomUUID(), weightedRandom(new String[]{"Notbot", "Anna", "Heavy Weapons Guy", "Scott", "Jianyao", "Wil", "Mundy", "Lando", "Vinny", "Shogo", "Wario", "Luya", "Ado", "Hal", "Heisenberg", "Bird", "John", "Minton", "Lorry", "Heathcliff", "Gilbert", "The Legend", "Plonko", "Plinko", "Hubert", "Pauling"}, new double[0], true));
     }
 
     public HumanPlayer(UUID uuid, String name) {
@@ -24,6 +24,7 @@ public class HumanPlayer extends Player {
         playerId = uuid;
         playerName = name;
         pos = new Vector3(0,0,0);
+        projVector = new Vector3(0,0,0);
     }
 
     public SpectatorPlayer convertSpec() {

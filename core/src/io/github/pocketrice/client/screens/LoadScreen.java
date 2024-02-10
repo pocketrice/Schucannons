@@ -10,25 +10,29 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import io.github.pocketrice.client.Fontbook;
+import io.github.pocketrice.client.GameManager;
 import io.github.pocketrice.client.SchuGame;
 
 public class LoadScreen extends ScreenAdapter {
     private static final int UPDATE_FRAME_COUNT = 60;
+    private static final int LOAD_DELAY_FRAME_COUNT = 700;
 
     private final Fontbook fontbook;
     private SpriteBatch batch;
     private OrthographicCamera camera;
     private SchuGame game;
+    private GameManager gmgr;
     private Image schuLoad;
 
     private String loadMsg;
-    private int updateDeltaFrames;
+    private int updateDeltaFrames, loadDelayFrames;
 
     public LoadScreen(SchuGame sg) {
         Gdx.graphics.setSystemCursor(Cursor.SystemCursor.Arrow);
         batch = new SpriteBatch();
         camera = new OrthographicCamera();
         game = sg;
+        gmgr = sg.getGmgr();
         schuLoad = new Image(new Texture(Gdx.files.internal("textures/schuload-fit.png")));
         schuLoad.setScale(1.333f);
 
@@ -64,6 +68,12 @@ public class LoadScreen extends ScreenAdapter {
         }
         fontbook.draw("tf2build", 24, batch, loadMsg, new Vector2(700,70), 200);
         batch.end();
+
+        loadDelayFrames++;
+
+        if (gmgr.isClientConnected() && loadDelayFrames > LOAD_DELAY_FRAME_COUNT) {
+            game.setScreen(new GameScreen(game.getGrdr()));
+        }
     }
 
     @Override

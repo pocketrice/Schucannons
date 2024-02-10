@@ -27,7 +27,6 @@ public class KryoInitialiser {
         kryo.register(ServerPayload.class, new ServerPayloadSerialiser());
         kryo.register(PlayerPayload.class, new PlayerPayloadSerialiser());
         kryo.register(PlayerTurnPayload.class, new PlayerTurnPayloadSerialiser());
-
         kryo.register(Object[].class);
         kryo.register(HumanPlayer.class);
     }

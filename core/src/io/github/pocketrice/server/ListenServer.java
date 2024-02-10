@@ -18,6 +18,7 @@ import java.net.UnknownHostException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.UUID;
 
 // A listenserver runs on the local machine; it should only run 1 MATCH. So, it can be slightly optimised.
 public class ListenServer extends GameServer {
@@ -84,7 +85,7 @@ public class ListenServer extends GameServer {
 
                             case "GC_selMatch" -> {
                                 // Clients should not send a selMatch packet. This is more so for my testing, to avoid that needless overhead.
-                                kryoServer.sendToTCP(con.getID(), new Response("GS_selMatch", constructPayload(m.getIdentifier())));
+                                kryoServer.sendToTCP(con.getID(), new Response("GS_selMatch", constructPayload(m.getMatchId())));
                                 kryoServer.sendToTCP(con.getID(), new Response("GS_mid", m.getMatchId() + "|" + m.getMatchName()));
                             }
                         }
@@ -103,7 +104,7 @@ public class ListenServer extends GameServer {
                     throw new RuntimeException(e);
                 }
                 System.out.println("updated");
-                sendPayload(m.getIdentifier());
+                sendPayload(m.getMatchId());
             }
         });
 
@@ -141,21 +142,21 @@ public class ListenServer extends GameServer {
     }
 
     @Override
-    public void sendPayload(String mid) {
+    public void sendPayload(UUID mid) {
         ServerPayload sp = constructPayload(mid);
         outBuffer.addFirst(sp);
         cleanBuffers();
         sendToMatch(mid, new Response("GS_pl", sp));
     }
 
-    public void sendToMatch(String mid, Response resp) {
+    public void sendToMatch(UUID mid, Response resp) {
         for (Connection con : kryoServer.getConnections()) {
             kryoServer.sendToTCP(con.getID(), resp);
-        }
+        } // FIX PLEASE!!!!!
     }
 
     @Override
-    public ServerPayload constructPayload(String mid) {
+    public ServerPayload constructPayload(UUID mid) {
 
         String a_id = String.valueOf(m.getCurrentPlayer().getPlayerId());
         String b_id = String.valueOf(m.getOppoPlayer().getPlayerId());

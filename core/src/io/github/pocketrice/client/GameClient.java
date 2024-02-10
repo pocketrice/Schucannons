@@ -14,6 +14,7 @@ import java.util.LinkedList;
 public abstract class GameClient {
     LinkedList<Object> outBuffer, inBuffer;
     Client kryoClient;
+    Player self;
     Thread kryoThread;
     String clientName;
     int tcpPort, clientRate, maxOBufferSize, maxIBufferSize; // double-check if storing tcpPort  is good practice

@@ -22,8 +22,8 @@ public class PlayerPayload {
         cannonPos = cpos;
 
         // Vec2 on ZY, angle b/w XY. Convert from spherical to rectangular coords (Calc III 11.7)
-        float rho = pmv2.len();
-        double phi = (float) Math.atan(pmv2.x / pmv2.y);
+        float rho = pmv2.len(); // does not need to be 3d b/c len is always same
+        double phi = Math.atan(pmv2.y / pmv2.x);
         projMotVec = new Vector3((float) (rho * Math.sin(phi) * Math.cos(theta)), (float) (rho * Math.sin(phi) * Math.sin(theta)), (float) (rho * Math.cos(phi))); // x = ρsinφcosθ, y = ρsinφsinθ, z = ρcosφ
         timestamp = Instant.now();
     }

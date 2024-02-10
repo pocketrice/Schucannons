@@ -28,11 +28,11 @@ public class Fontbook {
         FuzzySearch fs = new FuzzySearch(ftfs);
         String res = fs.getFuzzy(name)[0];
 
-        return ftfs.stream().filter(ftf -> ftf.toString().equals(res)).findFirst().get(); // return null if not there
+        return ftfs.stream().filter(ftf -> ftf.toString().equals(res)).findFirst().orElse(null); // return null if not there
     }
 
     public FreeTypeFontGenerator getFont(String name) {
-        return ftfs.stream().filter(ftf -> ftf.toString().equals(name)).findFirst().get();
+        return ftfs.stream().filter(ftf -> ftf.toString().equals(name)).findFirst().orElse(null);
     }
 
     public BitmapFont getSizedBitmap(String name, int fontSize) {

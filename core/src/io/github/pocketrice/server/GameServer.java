@@ -11,6 +11,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.UUID;
 
 @Getter
 public abstract class GameServer {
@@ -68,9 +69,9 @@ public abstract class GameServer {
     public abstract void close();
     public abstract void connectClient(GameClient client);
     public abstract void disconnectClient(GameClient client);
-    public abstract void sendPayload(String mid); // send out every-tick payload
+    public abstract void sendPayload(UUID mid); // send out every-tick payload
 
-    public abstract ServerPayload constructPayload(String mid);
+    public abstract ServerPayload constructPayload(UUID mid);
     public abstract Response receivePayload(Object obj); // acknowledge received payload?? needed?
 
     @Override

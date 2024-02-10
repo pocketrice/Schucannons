@@ -95,14 +95,14 @@ public class Match implements Comparable<Match> {
         }
     }
 
-    public Player getPlayer(String pid) {
+    public Player getPlayer(UUID pid) {
         Player p = null;
 
-        if (currentPlayer != null && currentPlayer.getIdentifier().equals(pid)) p = currentPlayer;
-        else if (oppoPlayer != null && oppoPlayer.getIdentifier().equals(pid)) p = oppoPlayer;
+        if (currentPlayer != null && currentPlayer.getPlayerId().equals(pid)) p = currentPlayer;
+        else if (oppoPlayer != null && oppoPlayer.getPlayerId().equals(pid)) p = oppoPlayer;
         else {
             for (SpectatorPlayer sp : spectators) {
-                if (sp.getIdentifier().equals(pid)) p = sp;
+                if (sp.getPlayerId().equals(pid)) p = sp;
             }
         }
 
@@ -172,6 +172,15 @@ public class Match implements Comparable<Match> {
         return (matchName.isEmpty()) ? matchId.toString() : matchName;
     }
 
+    public Player[] players() {
+        List<Player> players = new ArrayList<>();
+        if (currentPlayer != null) players.add(currentPlayer);
+        if (oppoPlayer != null) players.add(oppoPlayer);
+        players.addAll(spectators);
+
+        return players.toArray(new Player[0]);
+    }
+
     public void endMatch() {
         System.out.println("❖ Match ended. Final score: " + currentPlayer + "'s " + currentPlayer.health + " / " + oppoPlayer + "'s " + oppoPlayer.health);
         kickPlayer(currentPlayer);
@@ -204,7 +213,7 @@ public class Match implements Comparable<Match> {
     @Override
     public String toString() {
         //return (isFull ? ANSI_PURPLE + "FULL" : (currentPlayer == null || oppoPlayer == null) ? ANSI_GREEN + "OPEN" : ANSI_BLUE + "QUEUED") + " [" + playerCount() + "/2] " + "Match " +  getIdentifier() + ANSI_RESET + " (" + (currentPlayer == null ? "NA" : currentPlayer) + ", " + (oppoPlayer == null ? "NA" : oppoPlayer) + (spectators.isEmpty() ? "" : ", " + spectators) + ")";
-        return getIdentifier() + "|[" + playerCount() + "/2]|" + (currentPlayer == null ? "NA" : currentPlayer) + ", " + (oppoPlayer == null ? "NA" : oppoPlayer) + (spectators.isEmpty() ? "" : ", " + spectators) + ")";
+        return getMatchId() + "|" + getIdentifier() + "|[" + playerCount() + "/2]|" + (currentPlayer == null ? "NA" : currentPlayer) + ", " + (oppoPlayer == null ? "NA" : oppoPlayer) + (spectators.isEmpty() ? "" : ", " + spectators) + ")";
     }
 
     public boolean equals(Match other) {

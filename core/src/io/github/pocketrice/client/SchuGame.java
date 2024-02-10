@@ -1,11 +1,8 @@
 package io.github.pocketrice.client;
 
 import com.badlogic.gdx.Game;
-import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.viewport.FillViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
-import io.github.pocketrice.client.screens.GameScreen;
-import io.github.pocketrice.client.screens.LoadScreen;
 import io.github.pocketrice.client.screens.MenuScreen;
 import io.github.pocketrice.server.DedicatedServer;
 import io.github.pocketrice.server.GameServer;
@@ -22,11 +19,6 @@ public class SchuGame extends Game {
 	private GameRenderer grdr;
 	@Getter
 	private GameManager gmgr;
-	private MenuScreen ms;
-	private GameScreen gs;
-	private LoadScreen ls;
-	@Getter
-	private Stage stage;
 
 	@Override
 	public void create() {

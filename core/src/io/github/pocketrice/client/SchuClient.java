@@ -11,12 +11,13 @@ import io.github.pocketrice.shared.ResponseStatus;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.time.Instant;
 import java.util.LinkedList;
+import java.util.UUID;
 
 
 public class SchuClient extends GameClient {
     String matchId;
-    Player self;
     GameManager gmgr;
 
 
@@ -33,7 +34,7 @@ public class SchuClient extends GameClient {
         tcpPort = port;
         kryoClient = new Client();
         gmgr = gm;
-        self = new HumanPlayer();
+        self = new HumanPlayer(UUID.randomUUID(), "NOTBOT");
 
         inBuffer = new LinkedList<>();
         outBuffer = new LinkedList<>();
@@ -62,14 +63,23 @@ public class SchuClient extends GameClient {
 
                             case "GS_selMatch" -> {
                                 gmgr.receiveMatch(rp.getPayload());
+                                gmgr.setClientConnected(true);
                             }
 
                             case "GS_mid" -> {
                                 gmgr.receiveMatchId(rp.getPayload());
                             }
 
+                            case "GS_plList" -> {
+                                gmgr.receivePlayerList(rp.getPayload());
+                            }
                             case "GS_pl" -> {
+                                System.out.println(rp.getPayload());
                                 gmgr.receiveServerUpdate(rp.getPayload());
+                            }
+
+                            case "GS_ping" -> {
+                                kryoClient.sendTCP(new Response("GC_ping", Instant.now()));
                             }
                         }
                     }
@@ -108,7 +118,7 @@ public class SchuClient extends GameClient {
         PlayerPayload pp = constructPayload();
         outBuffer.addFirst(pp);
         cleanBuffers();
-        kryoClient.sendTCP(pp);
+        kryoClient.sendTCP(new Request("GC_pp", pp));
     }
 
 

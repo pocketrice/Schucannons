@@ -9,7 +9,8 @@ import java.time.Instant;
 @Getter
 public class ServerPayload {
     Instant timestamp;
-    String matchId, a_playerId, b_playerId;
+    String matchId;
+    String a_playerId, b_playerId;
 
     // Avoid just using Player objects; there is redundant info that need not be transmitted.
     Vector3 a_cannonPos, b_cannonPos, a_projMotVec, b_projMotVec; // Cannon can be oriented in direction of pmv, as that was based on that angle anyway.
@@ -37,5 +38,15 @@ public class ServerPayload {
         a_projMotVec = apmv;
         b_projMotVec = bpmv;
         cballPos = cbp;
+    }
+
+    @Override
+    public String toString() {
+        String matchStr = "{ " + timestamp + " } " + matchId.substring(0,5) + "\n";
+        if (a_playerId != null) matchStr += "* " + a_playerId.substring(0,5) + " -> " + a_cannonPos + "/" + a_projMotVec + "\n";
+        if (b_playerId != null) matchStr += "* " + b_playerId.substring(0,5) + " -> " + b_cannonPos + "/" + b_projMotVec + "\n";
+        matchStr += cballPos + "\n";
+
+        return matchStr;
     }
 }

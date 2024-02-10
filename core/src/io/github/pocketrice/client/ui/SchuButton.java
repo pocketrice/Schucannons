@@ -18,6 +18,8 @@ import io.github.pocketrice.shared.EasingFunction;
 import io.github.pocketrice.shared.LinkInterlerper;
 import lombok.Getter;
 
+import java.util.UUID;
+
 public class SchuButton extends TextButton {
     Audiobox audiobox;
     Fontbook fontbook;
@@ -34,7 +36,7 @@ public class SchuButton extends TextButton {
 
 
     public SchuButton(GameManager gm, Audiobox ab, Fontbook fb, String text, Skin skin) {
-        super(text.split("\\|")[0], skin);
+        super(text.split("\\|")[1], skin);
         this.setHeight(50);
         audiobox = ab;
         fontbook = fb;
@@ -71,7 +73,7 @@ public class SchuButton extends TextButton {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 audiobox.playSfx("buttonclick", 100f);
-                gman.sendSelMatch(text.split("\\|")[0]);
+                gman.sendSelMatch(UUID.fromString(text.split("\\|")[0]));
 
                 Game game = ((Game) Gdx.app.getApplicationListener());
                 game.setScreen(new LoadScreen((SchuGame) game));
