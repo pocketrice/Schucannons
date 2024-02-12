@@ -15,7 +15,7 @@
 
 <p align="center">
   <br>
-LibGDX projectile motion simulator and teaching tool for IB CS HL Y2 project.
+LibGDX projectile motion cannon game and AP Physics 1 teaching aid for IB CS HL Y2 Internal Assessment.
   <br><br>
 
 
