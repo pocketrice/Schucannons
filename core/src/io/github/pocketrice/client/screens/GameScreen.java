@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import io.github.pocketrice.client.Fontbook;
+import io.github.pocketrice.client.GameManager;
 import io.github.pocketrice.client.GameRenderer;
 
 public class GameScreen extends ScreenAdapter {
@@ -13,12 +14,15 @@ public class GameScreen extends ScreenAdapter {
     private SpriteBatch batch;
     private OrthographicCamera camera;
     private GameRenderer grdr;
+    private GameManager gmgr;
 
-    public GameScreen(GameRenderer gr) {
+    public GameScreen(GameRenderer gr, GameManager gm) {
         batch = new SpriteBatch();
         camera = new OrthographicCamera();
         grdr = gr;
+        gmgr = gm;
         fontbook = Fontbook.of("koholint.ttf", "dina.ttc", "tf2build.ttf", "tf2segundo.ttf", "delfino.ttf", "kyomadoka.ttf");
+        fontbook.setBatch(batch);
     }
 
     @Override

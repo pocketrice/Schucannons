@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.UUID;
 
-import static io.github.pocketrice.client.AnsiCode.*;
+import static io.github.pocketrice.shared.AnsiCode.*;
 import static io.github.pocketrice.client.BotPlayer.weightedRandom;
 
 @Getter

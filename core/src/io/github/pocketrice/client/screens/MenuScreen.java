@@ -2,7 +2,6 @@ package io.github.pocketrice.client.screens;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.ScreenAdapter;
-import com.badlogic.gdx.assets.loaders.ModelLoader;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
@@ -15,6 +14,7 @@ import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
+import com.badlogic.gdx.graphics.g3d.loader.G3dModelLoader;
 import com.badlogic.gdx.graphics.g3d.loader.ObjLoader;
 import com.badlogic.gdx.math.Quaternion;
 import com.badlogic.gdx.math.Vector2;
@@ -23,6 +23,7 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.utils.Align;
+import com.badlogic.gdx.utils.JsonReader;
 import com.badlogic.gdx.utils.viewport.Viewport;
 import io.github.pocketrice.client.Audiobox;
 import io.github.pocketrice.client.Fontbook;
@@ -30,6 +31,8 @@ import io.github.pocketrice.client.SchuGame;
 import io.github.pocketrice.client.ui.SchuButton;
 import io.github.pocketrice.shared.EasingFunction;
 import io.github.pocketrice.shared.LinkInterlerper;
+import net.mgsx.gltf.loaders.glb.GLBLoader;
+import net.mgsx.gltf.loaders.gltf.GLTFLoader;
 
 import java.util.Arrays;
 import java.util.List;
@@ -46,9 +49,13 @@ public class MenuScreen extends ScreenAdapter {
     Audiobox audiobox;
     SchuGame game;
 
+    LinkInterlerper<Float, Object[]> interlerpTitleFade;
+    LinkInterlerper<Float, Object[]> interlerpMenuFade;
+
     List<SchuButton> schubs;
     Table matchlistBtns;
     boolean isUILoaded; // TEMP
+
 
 
     public static final Model PANO_MODEL = loadModel(Gdx.files.internal("models/schupano.obj"));
@@ -70,6 +77,7 @@ public class MenuScreen extends ScreenAdapter {
         env.add(new DirectionalLight().set(0.8f, 0.3f, 0.4f, 0f, 0.5f, 0f));
 
         fontbook = Fontbook.of("tinyislanders.ttf", "koholint.ttf");
+        fontbook.setBatch(sprBatch);
         audiobox = Audiobox.of(List.of("buttonclick.ogg", "buttonclickrelease.ogg", "buttonrollover.ogg", "hint.ogg", "notification_alert.ogg"), List.of());
         game = sg;
         stage = new Stage(vp);
@@ -99,7 +107,7 @@ public class MenuScreen extends ScreenAdapter {
         modelBatch.end();
 
         sprBatch.begin();
-        fontbook.draw("tinyislanders", 40, sprBatch, "Select a match...", new Vector2(20,700), 300f);
+        fontbook.draw("tinyislanders", 40, "Select a match...", new Vector2(20,700));
         if (game.getGmgr().getMatchlist() == null) { // todo: only request once
             game.getGmgr().requestMatchlist();
         } else {
@@ -113,11 +121,10 @@ public class MenuScreen extends ScreenAdapter {
                     matchlistBtns.row();
                 });
 
-                System.out.println("btns loaded stupid");
-                if (!schubs.get(0).getText().isEmpty()) isUILoaded = true;
+                System.out.println("btns loaded stupid >:(");
+                isUILoaded = true;
             }
         }
-
         if (isUILoaded) {
             schubs.forEach((schub) -> {
                 LinkInterlerper<Color, ? super SchuButton> interlerpColor = schub.getInterlerpColor();
@@ -133,6 +140,7 @@ public class MenuScreen extends ScreenAdapter {
         }
 
         matchlistBtns.draw(sprBatch, 1f);
+        if (schubs != null && schubs.isEmpty()) fontbook.draw("koholint", 21, "No matches found.", new Vector2(200, 700));
         sprBatch.end();
         stage.act();
     }
@@ -148,7 +156,21 @@ public class MenuScreen extends ScreenAdapter {
     }
 
     public static Model loadModel(FileHandle filehandle) {
-        ModelLoader loader = new ObjLoader();
-        return loader.loadModel(filehandle);
+        Model res;
+
+        String[] handleStrs = filehandle.toString().split("\\.");
+        switch (handleStrs[handleStrs.length - 1].toLowerCase()) {
+            case "gltf" -> res = new GLTFLoader().load(filehandle).scene.model;
+
+            case "glb" -> res = new GLBLoader().load(filehandle).scene.model;
+
+            case "obj" -> res = new ObjLoader().loadModel(filehandle);
+
+            case "g3db" -> res = new G3dModelLoader(new JsonReader()).loadModel(filehandle);
+
+            default -> res = null;
+        }
+
+        return res;
     }
 }

@@ -8,14 +8,17 @@ import com.esotericsoftware.kryo.io.Output;
 import io.github.pocketrice.server.ServerPayload;
 
 import java.time.Instant;
+import java.util.UUID;
 
 public class ServerPayloadSerialiser extends Serializer<ServerPayload> {
     @Override
     public void write(Kryo kryo, Output output, ServerPayload object) {
+        boolean isPlayerBPresent = (object.getB_playerId() != null);
+
         output.writeString(object.getTimestamp().toString());
-        output.writeString(object.getMatchId());
-        output.writeString(object.getA_playerId());
-        output.writeString(object.getB_playerId());
+        output.writeString(object.getMatchId().toString());
+        output.writeString(object.getA_playerId().toString());
+        output.writeString((isPlayerBPresent) ? object.getB_playerId().toString() : "null");
 
         Vector3 a_cp = object.getA_cannonPos();
         Vector3 b_cp = object.getB_cannonPos();
@@ -33,9 +36,12 @@ public class ServerPayloadSerialiser extends Serializer<ServerPayload> {
     @Override
     public ServerPayload read(Kryo kryo, Input input, Class<? extends ServerPayload> type) {
         Instant timestamp = Instant.parse(input.readString());
-        String matchId = input.readString();
-        String a_pid = input.readString();
-        String b_pid = input.readString();
+        UUID matchId = UUID.fromString(input.readString());
+        UUID a_pid = UUID.fromString(input.readString());
+
+        String b_pidCand = input.readString();
+        boolean isPlayerBPresent = (!b_pidCand.matches("null"));
+        UUID b_pid = (isPlayerBPresent) ? UUID.fromString(b_pidCand) : null;
         Vector3 a_cp = new Vector3(input.readFloat(), input.readFloat(), input.readFloat());
         Vector3 b_cp = new Vector3(input.readFloat(), input.readFloat(), input.readFloat());
         Vector3 a_pmv = new Vector3(input.readFloat(), input.readFloat(), input.readFloat());

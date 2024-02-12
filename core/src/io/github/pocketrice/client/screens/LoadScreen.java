@@ -15,7 +15,7 @@ import io.github.pocketrice.client.SchuGame;
 
 public class LoadScreen extends ScreenAdapter {
     private static final int UPDATE_FRAME_COUNT = 60;
-    private static final int LOAD_DELAY_FRAME_COUNT = 700;
+    private static final int LOAD_DELAY_FRAME_COUNT = 400;
 
     private final Fontbook fontbook;
     private SpriteBatch batch;
@@ -40,7 +40,7 @@ public class LoadScreen extends ScreenAdapter {
         updateDeltaFrames = 0;
 
         fontbook = Fontbook.of("tf2build.ttf", "tf2segundo.ttf");
-
+        fontbook.setBatch(batch);
     }
 
     @Override
@@ -66,13 +66,13 @@ public class LoadScreen extends ScreenAdapter {
         if (loadMsg.equals("Loading....")) {
             loadMsg = "Loading";
         }
-        fontbook.draw("tf2build", 24, batch, loadMsg, new Vector2(700,70), 200);
+        fontbook.draw("tf2build", 24, loadMsg, new Vector2(700,70));
         batch.end();
 
         loadDelayFrames++;
 
         if (gmgr.isClientConnected() && loadDelayFrames > LOAD_DELAY_FRAME_COUNT) {
-            game.setScreen(new GameScreen(game.getGrdr()));
+            game.setScreen(new GameScreen(game.getGrdr(), game.getGmgr()));
         }
     }
 

@@ -4,7 +4,7 @@ import com.esotericsoftware.kryonet.Server;
 import io.github.pocketrice.client.GameClient;
 import io.github.pocketrice.shared.Response;
 import lombok.Getter;
-import org.apache.commons.lang3.NotImplementedException;
+import lombok.Setter;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -20,10 +20,11 @@ public abstract class GameServer {
     Server kryoServer;
     Thread updateThread, kryoThread;
     String serverName;
-    int tcpPort, tickRate, maxClients, maxOBufferSize, maxIBufferSize; // double-check if storing tcpPort is good practice
-    
+    int tcpPort, tickRate, tickCounter, maxClients, maxOBufferSize, maxIBufferSize; // double-check if storing tcpPort is good practice
+    @Setter
+    double tps;
 
-    public void setTcpPort(int port) throws IOException {
+    public void changePort(int port) throws IOException {
         tcpPort = port;
         kryoServer.close();
         kryoServer.bind(tcpPort);
@@ -61,10 +62,6 @@ public abstract class GameServer {
         return (totalCleared >= 0);
     }
 
-    public void ping() {
-        throw new NotImplementedException();
-    } // respond to client ping
-
     public abstract void start() throws IOException;
     public abstract void close();
     public abstract void connectClient(GameClient client);
@@ -77,7 +74,7 @@ public abstract class GameServer {
     @Override
     public String toString() {
         try {
-            return this.getClass().getSimpleName() + "-" + InetAddress.getLocalHost();
+            return (!serverName.isEmpty()) ? serverName : this.getClass().getSimpleName() + "-" + InetAddress.getLocalHost() + ":" + tcpPort;
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }

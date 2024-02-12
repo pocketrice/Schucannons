@@ -71,12 +71,23 @@ public class SchuButton extends TextButton {
 
         this.addListener(new ClickListener() {
             @Override
-            public void clicked(InputEvent event, float x, float y) {
-                audiobox.playSfx("buttonclick", 100f);
-                gman.sendSelMatch(UUID.fromString(text.split("\\|")[0]));
+            public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
+                if (button == com.badlogic.gdx.Input.Buttons.LEFT) {
+                    audiobox.playSfx("buttonclick", 100f);
+                }
 
-                Game game = ((Game) Gdx.app.getApplicationListener());
-                game.setScreen(new LoadScreen((SchuGame) game));
+                return true;
+            }
+
+            @Override
+            public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
+                if (button == com.badlogic.gdx.Input.Buttons.LEFT) {
+                    audiobox.playSfx("buttonclickrelease", 100f);
+                    gman.sendSelMatch(UUID.fromString(text.split("\\|")[0]));
+
+                    Game game = ((Game) Gdx.app.getApplicationListener());
+                    game.setScreen(new LoadScreen((SchuGame) game));
+                }
             }
 
             @Override

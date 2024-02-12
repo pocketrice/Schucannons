@@ -1,4 +1,4 @@
-package io.github.pocketrice.client;
+package io.github.pocketrice.shared;
 
 // Ansi codes are escape codes that can be appended to strings to apply colors to any console prints
 public enum AnsiCode {

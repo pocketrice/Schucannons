@@ -57,10 +57,10 @@ public class ListenServer extends GameServer {
         }
     }
 
-    public PlayerPayload findMostRecentPayload(String pid) {
+    public PlayerPayload findMostRecentPayload(UUID pid) {
         PlayerPayload pp = null;
         for (int i = 0; pp == null && i < inBuffer.size(); i++) {
-            if (((PlayerPayload) inBuffer.get(i)).getPlayerId().matches(pid)) {
+            if (((PlayerPayload) inBuffer.get(i)).getPlayerId().equals(pid)) {
                 pp = (PlayerPayload) inBuffer.get(i);
             }
         }
@@ -157,9 +157,8 @@ public class ListenServer extends GameServer {
 
     @Override
     public ServerPayload constructPayload(UUID mid) {
-
-        String a_id = String.valueOf(m.getCurrentPlayer().getPlayerId());
-        String b_id = String.valueOf(m.getOppoPlayer().getPlayerId());
+        UUID a_id = m.getCurrentPlayer().getPlayerId();
+        UUID b_id = m.getOppoPlayer().getPlayerId();
 
         PlayerPayload a_pp = findMostRecentPayload(a_id);
         PlayerPayload b_pp = findMostRecentPayload(b_id);
@@ -182,7 +181,7 @@ public class ListenServer extends GameServer {
 
         Vector3 cballpos = a_pp.getCannonPos().add(x,y,z); // todo: validate if this is right.
 
-        return new ServerPayload(m.getIdentifier(), a_id, b_id, a_cpos, b_cpos, a_pmv, b_pmv, cballpos);
+        return new ServerPayload(m.getMatchId(), a_id, b_id, a_cpos, b_cpos, a_pmv, b_pmv, cballpos);
     }
 
 

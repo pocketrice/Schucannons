@@ -11,25 +11,35 @@ import io.github.pocketrice.shared.Response;
 import io.github.pocketrice.shared.ResponseStatus;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static io.github.pocketrice.shared.AnsiCode.ANSI_BLUE;
+import static io.github.pocketrice.shared.AnsiCode.ANSI_RESET;
+
 public class DedicatedServer extends GameServer {
+    public static final int TICKS_PER_CHECK = 20;
     Matchmaker mm;
     GameSimulator gsim;
     Map<UUID, Set<Connection>> clientMap;
 
-    public DedicatedServer() {
+
+
+    public DedicatedServer() throws UnknownHostException {
         this(3074);
     }
 
-    public DedicatedServer(int port) {
-        this("", port);
+    public DedicatedServer(int port) throws UnknownHostException {
+        this("", port); // Note: cannot manually use server.tostring() ever b/c though it is set, it somehow becomes an anonymous inner class I think? (io.github.pocketrice.server.DedicatedServer$1@38bc504f; notice $1) in start(). So, always use serverName. Guaranteed to be set to smth significant anyway.
+        serverName = this.getClass().getSimpleName() + "-" + InetAddress.getLocalHost() + ":" + tcpPort;
     }
 
     public DedicatedServer(String name, int port) {
-        serverName = (name.isBlank()) ? this.toString() : name;
+        serverName = name;
         tcpPort = port;
         kryoServer = new Server();
 
@@ -41,6 +51,8 @@ public class DedicatedServer extends GameServer {
         outBuffer = new LinkedList<>();
 
         tickRate = 20;
+        tickCounter = 0;
+        tps = 0.0;
         maxClients = 20;
         maxIBufferSize = maxOBufferSize = 10;
     }
@@ -54,10 +66,11 @@ public class DedicatedServer extends GameServer {
         }
     }
 
-    public PlayerPayload findMostRecentPayload(String pid) {
+    public PlayerPayload findMostRecentPayload(UUID pid) {
         PlayerPayload pp = null;
         for (int i = 0; pp == null && i < inBuffer.size(); i++) {
-            if (((PlayerPayload) inBuffer.get(i)).getPlayerId().matches(pid)) {
+            if (((PlayerPayload) inBuffer.
+                    get(i)).getPlayerId().equals(pid)) {
                 pp = (PlayerPayload) inBuffer.get(i);
             }
         }
@@ -97,24 +110,39 @@ public class DedicatedServer extends GameServer {
                                 kryoServer.sendToTCP(con.getID(), new Response("GS_mid", m.getMatchId() + "|" + m.getMatchName()));
                             }
 
-                            case "GC_pp", "GC_ptp" -> {// todo: correct?
-                                receivePayload(rq.getPayload());
-                            }
+                            case "GC_pp", "GC_ptp" -> // todo: correct?
+                                    receivePayload(rq.getPayload());
 
                             case "GC_ping" -> {
-                                kryoServer.sendToTCP(con.getID(), new Response("GS_ping", Instant.now()));
+                                System.out.println(ANSI_BLUE + "[GS] gc_ping received." + ANSI_RESET);
+                                kryoServer.sendToTCP(con.getID(), new Response("GS_ping", Instant.now() + "|" + serverName + "|" + tps));
                             }
+
+                            default -> throw new IllegalArgumentException("Invalid client request — " + rq.getMsg() + "!");
                         }
                     }
                 }
             });
         });
 
-        kryoThread.setName(this + "-KryoThread");
+        kryoThread.setName(this + "-KryThread");
         kryoThread.start();
 
         updateThread = new Thread(() -> { // Updates every tick (66 Hz).
+            Instant tickCheckStart = Instant.now();
+
             while (true) {
+                tickCounter++;
+
+                /*
+                 * TPS calculator
+                 */
+                if (tickCounter >= TICKS_PER_CHECK) {
+                    tps = (double) tickCounter / ChronoUnit.SECONDS.between(tickCheckStart, Instant.now());
+                    tickCounter = 0;
+                    tickCheckStart = Instant.now();
+                }
+
                 try {
                     Thread.sleep(1000 / tickRate); // NOT busywaiting! Ignore warning.
                 } catch (InterruptedException e) {
@@ -127,7 +155,7 @@ public class DedicatedServer extends GameServer {
                 }
             }
         });
-        updateThread.setName(this + "-UpdateThread");
+        updateThread.setName(this + "-UpdThread");
         updateThread.start();
 
     }
@@ -164,7 +192,7 @@ public class DedicatedServer extends GameServer {
         ServerPayload sp = constructPayload(mid);
         outBuffer.addFirst(sp);
         cleanBuffers();
-        System.out.println("GS_PL -> " + mid);
+        //System.out.println("GS_PL -> " + mid);
         sendToMatch(mid, new Response("GS_pl", sp));
     }
 
@@ -177,8 +205,8 @@ public class DedicatedServer extends GameServer {
     @Override
     public ServerPayload constructPayload(UUID mid) {
         Match m = mm.findMatch(mid.toString());
-        String a_id = (m.getCurrentPlayer() == null) ? null : String.valueOf(m.getCurrentPlayer().getPlayerId());
-        String b_id = (m.getOppoPlayer() == null) ? null : String.valueOf(m.getOppoPlayer().getPlayerId());
+        UUID a_id = (m.getCurrentPlayer() == null) ? null : m.getCurrentPlayer().getPlayerId();
+        UUID b_id = (m.getOppoPlayer() == null) ? null : m.getOppoPlayer().getPlayerId();
 
         PlayerPayload a_pp = findMostRecentPayload(a_id);
         PlayerPayload b_pp = findMostRecentPayload(b_id);
@@ -198,7 +226,7 @@ public class DedicatedServer extends GameServer {
 
         Vector3 cballpos = (a_pp == null) ? Vector3.Zero : a_pp.getCannonPos().set(gsim.projMot(a_pmv, a_cpos, t)); // todo: validate if this is right.
 
-        return new ServerPayload(mid.toString(), a_id, b_id, a_cpos, b_cpos, a_pmv, b_pmv, cballpos);
+        return new ServerPayload(mid, a_id, b_id, a_cpos, b_cpos, a_pmv, b_pmv, cballpos);
     }
 
 

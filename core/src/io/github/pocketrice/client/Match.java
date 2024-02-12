@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import static io.github.pocketrice.client.AnsiCode.*;
+import static io.github.pocketrice.shared.AnsiCode.*;
 
 @Getter
 public class Match implements Comparable<Match> {
@@ -118,7 +118,7 @@ public class Match implements Comparable<Match> {
 
     public void refusePlayer(Player p) {
         p.isRefused = true;
-        System.out.println("Match full, cannot be joined"); // handle for player. This has to interact with gui and server.
+        //System.out.println("Match full, cannot be joined"); // handle for player. This has to interact with gui and server.
 
         // TODO: handle if refused (technically should not happen).
     }

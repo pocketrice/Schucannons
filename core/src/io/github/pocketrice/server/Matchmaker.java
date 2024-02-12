@@ -9,8 +9,8 @@ import io.github.pocketrice.client.Player;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static io.github.pocketrice.client.AnsiCode.ANSI_BLUE;
-import static io.github.pocketrice.client.AnsiCode.ANSI_RESET;
+import static io.github.pocketrice.shared.AnsiCode.ANSI_BLUE;
+import static io.github.pocketrice.shared.AnsiCode.ANSI_RESET;
 
 public class Matchmaker {
     List<Match> matches;
@@ -32,10 +32,12 @@ public class Matchmaker {
 
            startMatches[i].setMatchName(Faker.instance().food().spice().replaceAll("(China |Chinese |Chinese 5 |Mexican |Self Adhesive |Thai )", "").split(" ")[0] + " " + Faker.instance().hobbit().character().replaceAll("(The |Great )", "").split(" ")[0]); // insert obligatory commentary on blasé unfairness w/ titles and nobles, blah blah...
        }
-
        matches = new ArrayList<>();
+
+
        availableMatches = new PriorityQueue<>();
        addMatches(startMatches);
+
     }
 
     public Match findMatch(String identifier) {

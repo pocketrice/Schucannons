@@ -5,18 +5,18 @@ import com.badlogic.gdx.math.Vector3;
 import lombok.Getter;
 
 import java.time.Instant;
+import java.util.UUID;
 
 // This class represents a game state, which is sent based on tickrate
 @Getter
 public class PlayerPayload {
-
     Instant timestamp;
-    String playerId, matchId;
+    UUID playerId, matchId;
     Vector3 cannonPos;
     Vector3 projMotVec; // Normally this data should be received as an angle too, but this is packaged into a Vec3 for efficiency.
     //double cannonAngle; // Assuming spherical, phi can be ignored since it is auto-calibrated
 
-    public PlayerPayload(String pid, String mid, Vector3 cpos, Vector2 pmv2, double theta) {
+    public PlayerPayload(UUID pid, UUID mid, Vector3 cpos, Vector2 pmv2, double theta) {
         playerId = pid;
         matchId = mid;
         cannonPos = cpos;
@@ -28,7 +28,7 @@ public class PlayerPayload {
         timestamp = Instant.now();
     }
 
-    public PlayerPayload(String pid, String mid, Vector3 cpos, Vector3 pmv3) {
+    public PlayerPayload(UUID pid, UUID mid, Vector3 cpos, Vector3 pmv3) {
         playerId = pid;
         matchId = mid;
         cannonPos = cpos;
@@ -36,7 +36,7 @@ public class PlayerPayload {
         timestamp = Instant.now();
     }
 
-    public PlayerPayload(Instant ts, String pid, String mid, Vector3 cpos, Vector3 pmv3) {
+    public PlayerPayload(Instant ts, UUID pid, UUID mid, Vector3 cpos, Vector3 pmv3) {
         timestamp = ts;
         playerId = pid;
         matchId = mid;

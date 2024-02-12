@@ -8,10 +8,13 @@ import io.github.pocketrice.server.DedicatedServer;
 import io.github.pocketrice.server.GameServer;
 import lombok.Getter;
 
+import static io.github.pocketrice.shared.AnsiCode.*;
+
 // TODO: AWFUL memory leaks abound, pls fix
 
 public class SchuGame extends Game {
 	public static final int VIEWPORT_WIDTH = 960, VIEWPORT_HEIGHT = 880;
+	public static final boolean IS_DEBUG = true;
 
 	private Viewport vp;
 	private SchuClient sclient;
@@ -20,8 +23,10 @@ public class SchuGame extends Game {
 	@Getter
 	private GameManager gmgr;
 
+
 	@Override
 	public void create() {
+		if (IS_DEBUG) System.out.println(ANSI_YELLOW + "<!> Debug mode enabled.\n\n" + ANSI_RESET);
 		vp = new FillViewport(VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 		gmgr = new GameManager();
 		grdr = new GameRenderer(gmgr);

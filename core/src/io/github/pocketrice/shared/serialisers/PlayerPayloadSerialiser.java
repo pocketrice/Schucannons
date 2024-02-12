@@ -8,13 +8,14 @@ import com.esotericsoftware.kryo.io.Output;
 import io.github.pocketrice.client.PlayerPayload;
 
 import java.time.Instant;
+import java.util.UUID;
 
 public class PlayerPayloadSerialiser extends Serializer<PlayerPayload> {
     @Override
     public void write(Kryo kryo, Output output, PlayerPayload object) {
         output.writeString(object.getTimestamp().toString());
-        output.writeString(object.getPlayerId());
-        output.writeString(object.getMatchId());
+        output.writeString(object.getPlayerId().toString());
+        output.writeString(object.getMatchId().toString());
 
         Vector3 cpos = object.getCannonPos();
         Vector3 pmv = object.getProjMotVec();
@@ -26,8 +27,8 @@ public class PlayerPayloadSerialiser extends Serializer<PlayerPayload> {
     @Override
     public PlayerPayload read(Kryo kryo, Input input, Class<? extends PlayerPayload> type) {
         Instant timestamp = Instant.parse(input.readString());
-        String playerId = input.readString();
-        String matchId = input.readString();
+        UUID playerId = UUID.fromString(input.readString());
+        UUID matchId = UUID.fromString(input.readString());
 
         Vector3 cpos = new Vector3(input.readFloat(), input.readFloat(), input.readFloat());
         Vector3 pmv = new Vector3(input.readFloat(), input.readFloat(), input.readFloat());

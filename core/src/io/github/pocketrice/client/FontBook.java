@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.math.Vector2;
 import io.github.pocketrice.shared.FuzzySearch;
+import org.javatuples.Triplet;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,10 +18,14 @@ import java.util.TreeMap;
 public class Fontbook {
     List<FreeTypeFontGenerator> ftfs;
     Map<Integer, List<BitmapFont>> bmfCache;
+    Triplet<String, Integer, Color> presetSettings;
+    SpriteBatch presetBatch;
 
     public Fontbook(FreeTypeFontGenerator... fonts) {
         ftfs = new ArrayList<>(List.of(fonts));
         bmfCache = new TreeMap<>();
+        presetSettings = new Triplet<>("tinyislanders", 18, Color.BLACK);
+        presetBatch = null;
     }
 
     // fuzzy search bc why not. prolly not
@@ -57,31 +62,51 @@ public class Fontbook {
     }
 
 
-    public void draw(String font, SpriteBatch batch, CharSequence text, Vector2 loc) {
-        draw(font, 12, batch, text, loc, 500f);
-    }
-
-    public void draw(String font, int fontSize, SpriteBatch batch, CharSequence text, Vector2 loc, float width) {
+    public void draw(String font, int fontSize, CharSequence text, Vector2 loc) {
         BitmapFont bmf = getSizedBitmap(font, fontSize);
-        bmf.draw(batch, text, loc.x, loc.y, width, 0, true);
+        bmf.draw(presetBatch, text, loc.x, loc.y);
     }
 
-    public void formatDraw(String font, Color color, SpriteBatch batch, CharSequence text, Vector2 loc) {
-        formatDraw(font, 12, color, batch, text, loc, 500f);
+    public void draw(CharSequence text, Vector2 loc) {
+        draw(presetSettings.getValue0(), presetSettings.getValue1(), text, loc);
     }
 
-    public void formatDraw(String font, int fontSize, Color color, SpriteBatch batch, CharSequence text, Vector2 loc, float width) {
+    public void formatDraw(String font, int fontSize, Color color, CharSequence text, Vector2 loc) {
         BitmapFont bmf = getSizedBitmap(font, fontSize);
 
         Color oldCol = bmf.getColor();
         bmf.setColor(color);
-        bmf.draw(batch, text, loc.x, loc.y, width, 0, true);
+        bmf.draw(presetBatch, text, loc.x, loc.y);
         bmf.setColor(oldCol); // Set color back to default
     }
 
+    public void formatDraw(CharSequence text, Vector2 loc) {
+        formatDraw(presetSettings.getValue0(), presetSettings.getValue1(), presetSettings.getValue2(), text, loc);
+    }
+
+
+    public Fontbook font(String font) {
+        presetSettings = presetSettings.setAt0(font);
+        return this;
+    }
+
+    public Fontbook fontSize(int fs) {
+        presetSettings = presetSettings.setAt1(fs);
+        return this;
+    }
+
+    public Fontbook fontColor(Color fc) {
+        presetSettings = presetSettings.setAt2(fc);
+        return this;
+    }
+
+    // Terminating branch of builder
+    public void setBatch(SpriteBatch batch) {
+        presetBatch = batch;
+    }
 
     public void loadFont(String fontFile) {
-        if (!fontFile.matches(".*(\\.ttf).*")) System.err.println("Warning: " + fontFile + " is not .ttf format. Likely will not load.");
+        if (!fontFile.matches(".*(\\.ttf|\\.ttc)")) System.err.println("Warning: " + fontFile + " is not .ttf format. Likely will not load.");
         FreeTypeFontGenerator ftfg = new FreeTypeFontGenerator(Gdx.files.internal("fonts/" + fontFile));
         ftfs.add(ftfg);
     }

@@ -3,22 +3,33 @@ package io.github.pocketrice.client;
 import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
+import io.github.pocketrice.server.ServerPayload;
 import io.github.pocketrice.shared.KryoInitialiser;
 import io.github.pocketrice.shared.Request;
 import io.github.pocketrice.shared.Response;
 import io.github.pocketrice.shared.ResponseStatus;
+import lombok.Setter;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.LinkedList;
 import java.util.UUID;
 
+import static io.github.pocketrice.shared.AnsiCode.ANSI_BLUE;
+import static io.github.pocketrice.shared.AnsiCode.ANSI_RESET;
+
 
 public class SchuClient extends GameClient {
-    String matchId;
     GameManager gmgr;
+    @Setter
+    UUID matchId;
+    @Setter
+    boolean isMatchStarted;
+
 
 
     public SchuClient(GameManager gm) throws UnknownHostException {
@@ -26,7 +37,8 @@ public class SchuClient extends GameClient {
     }
 
     public SchuClient(GameManager gm, int port) throws UnknownHostException {
-        this(gm, "client-" + InetAddress.getLocalHost(), port);
+        this(gm, "", port);
+        clientName =  "client-" + InetAddress.getLocalHost();
     }
 
     public SchuClient(GameManager gm, String name, int port) {
@@ -39,12 +51,13 @@ public class SchuClient extends GameClient {
         inBuffer = new LinkedList<>();
         outBuffer = new LinkedList<>();
 
+        isMatchStarted = false;
+
         clientRate = calcClientRate();
         maxIBufferSize = maxOBufferSize = 10;
     }
 
     public int calcClientRate() {
-        //ping();
         return 20; // todo: get ping packet and do stuffs
     }
 
@@ -57,44 +70,85 @@ public class SchuClient extends GameClient {
                 public void received(Connection con, Object obj) {
                     if (obj instanceof Response rp) {
                         switch (rp.getMsg()) {
-                            case "GS_matches" -> {
-                                gmgr.receiveMatchList(rp.getPayload());
-                            }
+                            case "GS_matches" -> gmgr.receiveMatchList(rp.getPayload());
 
                             case "GS_selMatch" -> {
+                                matchId = ((ServerPayload) rp.getPayload()).getMatchId();
                                 gmgr.receiveMatch(rp.getPayload());
                                 gmgr.setClientConnected(true);
                             }
 
-                            case "GS_mid" -> {
-                                gmgr.receiveMatchId(rp.getPayload());
-                            }
+                            case "GS_mid" -> gmgr.receiveMatchId(rp.getPayload());
 
-                            case "GS_plList" -> {
-                                gmgr.receivePlayerList(rp.getPayload());
-                            }
-                            case "GS_pl" -> {
-                                System.out.println(rp.getPayload());
-                                gmgr.receiveServerUpdate(rp.getPayload());
-                            }
+                            case "GS_plList" -> gmgr.receivePlayerList(rp.getPayload());
+
+                            case "GS_pl" -> gmgr.receiveServerUpdate(rp.getPayload());
 
                             case "GS_ping" -> {
-                                kryoClient.sendTCP(new Response("GC_ping", Instant.now()));
+                                Instant endPingTime = Instant.now(); // Save now to ensure post-ping ops do not add delay
+                                String[] payload = ((String) rp.getPayload()).split("\\|");
+
+                                Instant serverPingTime = Instant.parse(payload[0]);
+                                long pingToServer = ChronoUnit.MILLIS.between(pingTime, serverPingTime);
+                                long pingToClient = ChronoUnit.MILLIS.between(serverPingTime, endPingTime);
+                                ping = pingToServer + pingToClient; // combine ping halves
+
+                                serverName = payload[1];
+                                String[] splitName = payload[1].split("/");
+                                serverAddress = new InetSocketAddress(splitName[splitName.length-1].split(":")[0], Integer.parseInt(splitName[splitName.length-1].split(":")[1]));
+
+                                serverTps = Double.parseDouble(payload[2]);
+
+                                System.out.print(ANSI_BLUE + "[GC] gs_ping received. " + pingToServer + "ms (c-s), " + pingToClient + "ms (s-c), ");
+                                System.out.println(ping + "ms (total)" + "\n" + ANSI_RESET);
+
+                                if (!serverName.equals(payload[1])) {
+                                    serverAddress = kryoClient.getRemoteAddressTCP();
+                                    serverName = payload[1];
+                                }
                             }
+
+                            default -> throw new IllegalArgumentException("Invalid server response — " + rp.getMsg() + "!");
                         }
                     }
                 }
             });
         });
 
-        kryoThread.setName(this + "-KryoThread");
+        kryoThread.setName(this + "-KryThread");
         kryoThread.start();
+
+        updateThread = new Thread(() -> {
+            long millisSincePing = 0;
+
+            while (true) {
+                try {
+                    Thread.sleep(1000 / clientRate); // NOT busywaiting! Ignore warning.
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+
+                if (isMatchStarted) {
+                    millisSincePing += 1000 / clientRate;
+
+                    if (millisSincePing > PING_INTERVAL) {
+                        ping();
+                        millisSincePing = 0;
+                    }
+
+                    sendPayload();
+                }
+            }
+        });
+
+        updateThread.setName(this + "-UpdThread");
+        updateThread.start();
     }
 
     @Override
     public void connect(int timeout, String ipv4, int[] ports) throws IOException {
         kryoClient.connect(timeout, ipv4, ports[0]);
-        kryoClient.sendTCP(new Request("GC_connect", null)); // needed?
+        //kryoClient.sendTCP(new Request("GC_connect", null)); // needed?
     }
 
     @Override
@@ -106,6 +160,12 @@ public class SchuClient extends GameClient {
     @Override
     public void reconnect() throws IOException {
         kryoClient.reconnect();
+    }
+
+    @Override
+    public void ping() {
+        pingTime = Instant.now();
+        kryoClient.sendTCP(new Request("GC_ping", null));
     }
 
     @Override
@@ -124,7 +184,7 @@ public class SchuClient extends GameClient {
 
     @Override
     public PlayerPayload constructPayload() {
-        return new PlayerPayload(self.getIdentifier(), matchId, self.getPos(), self.projVector);
+        return new PlayerPayload(self.getPlayerId(), matchId, self.getPos(), self.projVector);
     }
 
     @Override
@@ -138,5 +198,10 @@ public class SchuClient extends GameClient {
         cleanBuffers();
 
         return new Response(ResponseStatus.OK.name(), null);
+    }
+
+    @Override
+    public String toString() {
+        return super.toString();
     }
 }

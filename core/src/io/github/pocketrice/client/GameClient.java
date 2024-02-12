@@ -7,17 +7,26 @@ import org.apache.commons.lang3.NotImplementedException;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.time.Instant;
 import java.util.LinkedList;
 
 @Getter
 public abstract class GameClient {
+    public static final long PING_INTERVAL = 2000;
+
     LinkedList<Object> outBuffer, inBuffer;
     Client kryoClient;
+    Thread kryoThread, updateThread;
+    InetSocketAddress serverAddress;
+    Instant pingTime;
     Player self;
-    Thread kryoThread;
-    String clientName;
+
+    String clientName, serverName;
     int tcpPort, clientRate, maxOBufferSize, maxIBufferSize; // double-check if storing tcpPort  is good practice
+    double serverTps;
+    long ping;
 
     public boolean cleanBuffers() {
         int totalCleared = 0;
@@ -68,7 +77,7 @@ public abstract class GameClient {
     @Override
     public String toString() {
         try {
-            return this.getClass().getSimpleName() + "-" + InetAddress.getLocalHost();
+            return (!clientName.isEmpty()) ? clientName :  "client-" + InetAddress.getLocalHost();
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }

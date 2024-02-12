@@ -9,7 +9,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.DoubleStream;
 
-import static io.github.pocketrice.client.AnsiCode.ANSI_RESET;
+import static io.github.pocketrice.shared.AnsiCode.ANSI_RESET;
 
 @Getter
 public class BotPlayer extends Player {
