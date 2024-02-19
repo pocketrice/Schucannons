@@ -6,6 +6,8 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Cursor;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
@@ -26,14 +28,15 @@ public class SchuButton extends TextButton {
     @Getter
     TextButtonStyle tbs;
     @Getter
+    Label labelMatchPeek;
+    @Getter
     LinkInterlerper<Integer, ? super SchuButton> interlerpFontSize; // Java PECS acronym - consumers should ? super T!
     @Getter
     LinkInterlerper<Color, ? super SchuButton> interlerpColor;
-   /* @Getter
-    LinkInterlerper<Float, ? super SchuButton> interlerpRot;*/
+    @Getter
+    LinkInterlerper<Float, ? super Label> interlerpLabelOpacity;
+    @Getter
     GameManager gman;
-
-
 
     public SchuButton(GameManager gm, Audiobox ab, Fontbook fb, String text, Skin skin) {
         super(text.split("\\|")[1], skin);
@@ -42,9 +45,14 @@ public class SchuButton extends TextButton {
         fontbook = fb;
         tbs = new TextButtonStyle();
 
+        LabelStyle anonStyleMi = new LabelStyle(); // Anonymous labels are used.
+        anonStyleMi.font = fontbook.getSizedBitmap("koholint", 20);
+        anonStyleMi.fontColor = Color.valueOf("#e7bbe5b0");
+        String[] matchInfo = text.split("\\|");
 
+        labelMatchPeek = new Label(matchInfo[2] + " (" + matchInfo[3] + ")", anonStyleMi);
 
-        interlerpFontSize = new LinkInterlerper<>(21, 24)
+        interlerpFontSize = new LinkInterlerper<>(21, 24, EasingFunction.EASE_IN_OUT_SINE, 0.04)
                 .linkObj(this)
                 .linkFunc((t, obj) -> {
                     SchuButton schub = (SchuButton) obj; // vv The easing is ALWAYS linear here, because step() already applies an easing.
@@ -53,7 +61,7 @@ public class SchuButton extends TextButton {
                     schub.setStyle(tbs);
                 });
 
-        interlerpColor = new LinkInterlerper<>(Color.valueOf("#afafdd"), Color.valueOf("#e2e5f3"))
+        interlerpColor = new LinkInterlerper<>(Color.valueOf("#afafdd"), Color.valueOf("#e2e5f3"), EasingFunction.EASE_IN_OUT_SINE, 0.04)
                 .linkObj(this)
                 .linkFunc((t, obj) -> {
                     SchuButton schub = (SchuButton) obj;
@@ -61,6 +69,17 @@ public class SchuButton extends TextButton {
                     schub.setStyle(tbs);
                 });
 
+        interlerpLabelOpacity = new LinkInterlerper<>(0f, 1f, EasingFunction.EASE_IN_OUT_SINE, 0.04)
+                .linkObj(labelMatchPeek)
+                .linkFunc((t, obj) -> {
+                    Label label = (Label) obj;
+                    Color labelColor = label.getColor();
+                    label.setColor(labelColor.r, labelColor.g, labelColor.b, interlerpLabelOpacity.interlerp(t, EasingFunction.LINEAR));
+                });
+
+        interlerpFontSize.setInterlerp(false);
+        interlerpColor.setInterlerp(false);
+        interlerpLabelOpacity.setInterlerp(false);
         /*interlerpRot = new LinkInterlerper<>(0f, 10f) // todo: ilRot should be called after schubs are moved OUT of a table. pls thank u
                 .linkObj(this)
                 .linkFunc((t, obj) -> {
@@ -93,12 +112,12 @@ public class SchuButton extends TextButton {
             @Override
             public void exit(InputEvent event, float x, float y, int pointer, Actor toActor) {
                // audiobox.playSfx("buttonrollover", 2f);
-                interlerpFontSize.setInterlerpStatus(true);
-                interlerpColor.setInterlerpStatus(true);
-//                interlerpRot.setInterlerpStatus(true);
-                interlerpFontSize.setDirection(false);
-                interlerpColor.setDirection(false);
-//                interlerpRot.setDirection(false);
+                interlerpFontSize.setInterlerp(true);
+                interlerpColor.setInterlerp(true);
+                interlerpLabelOpacity.setInterlerp(true);
+                interlerpFontSize.setForward(false);
+                interlerpColor.setForward(false);
+                interlerpLabelOpacity.setForward(false);
 
                 Gdx.graphics.setSystemCursor(Cursor.SystemCursor.Arrow);
             }
@@ -106,12 +125,12 @@ public class SchuButton extends TextButton {
             @Override
             public void enter(InputEvent event, float x, float y, int pointer, Actor fromActor) {
                 audiobox.playSfx("hint", 5f);
-                interlerpFontSize.setInterlerpStatus(true);
-                interlerpColor.setInterlerpStatus(true);
-//                interlerpRot.setInterlerpStatus(true);
-                interlerpFontSize.setDirection(true);
-                interlerpColor.setDirection(true);
-//                interlerpRot.setDirection(true);
+                interlerpFontSize.setInterlerp(true);
+                interlerpColor.setInterlerp(true);
+                interlerpLabelOpacity.setInterlerp(true);
+                interlerpFontSize.setForward(true);
+                interlerpColor.setForward(true);
+                interlerpLabelOpacity.setForward(true);
 
                 Gdx.graphics.setSystemCursor(Cursor.SystemCursor.Hand);
             }

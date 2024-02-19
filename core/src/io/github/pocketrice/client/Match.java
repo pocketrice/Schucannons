@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -48,15 +49,15 @@ public class Match implements Comparable<Match> {
     }
 
 
-    public void updateState() { // force await if still await (should not be called during that phase anyway), or check for ended.
-        if (gameState == GameState.AWAIT) return;
-        if (turnCount > 10 || currentPlayer.health <= 0 || oppoPlayer.health <= 0) {
+    public void updateState() { // force a`wait if still await (should not be called during that phase anyway), or check for ended.
+        if (gameState == GameState.AWAIT && currentPlayer != null && oppoPlayer != null && currentPlayer.isReady && oppoPlayer.isReady)
+            gameState = GameState.READY; // note: matches aren't updating fast enough...
+        else if (gameState != GameState.AWAIT && (turnCount > 10 || currentPlayer.health <= 0 || oppoPlayer.health <= 0))
             gameState = GameState.ENDED;
-        }
     }
 
     public void start() throws InterruptedException {
-        gameState = GameState.RUNNING;
+        gameState = GameState.READY;
         System.out.println(ANSI_BLUE + "Match started.\n\n" + ANSI_RESET);
         while (turnCount < 10) {
             turnCount++;
@@ -114,6 +115,8 @@ public class Match implements Comparable<Match> {
             PlayerType pType = PlayerType.get(Math.min(playerCount(), 2));
             setPlayer(p, pType);
         }
+
+        updateState();
     }
 
     public void refusePlayer(Player p) {
@@ -213,15 +216,16 @@ public class Match implements Comparable<Match> {
     @Override
     public String toString() {
         //return (isFull ? ANSI_PURPLE + "FULL" : (currentPlayer == null || oppoPlayer == null) ? ANSI_GREEN + "OPEN" : ANSI_BLUE + "QUEUED") + " [" + playerCount() + "/2] " + "Match " +  getIdentifier() + ANSI_RESET + " (" + (currentPlayer == null ? "NA" : currentPlayer) + ", " + (oppoPlayer == null ? "NA" : oppoPlayer) + (spectators.isEmpty() ? "" : ", " + spectators) + ")";
-        return getMatchId() + "|" + getIdentifier() + "|[" + playerCount() + "/2]|" + (currentPlayer == null ? "NA" : currentPlayer) + ", " + (oppoPlayer == null ? "NA" : oppoPlayer) + (spectators.isEmpty() ? "" : ", " + spectators) + ")";
+        return getMatchId() + "|" + getIdentifier() + "|[" + playerCount() + "/2]|" + (currentPlayer == null ? "NA" : currentPlayer) + ", " + (oppoPlayer == null ? "NA" : oppoPlayer) + (spectators.isEmpty() ? "" : ", " + spectators);
     }
 
     public boolean equals(Match other) {
         return this.toString().equals(other.toString()); // convenient way to include all comparable data
     }
 
-
-
+    public boolean hasPlayer(UUID pid) {
+        return Arrays.stream(players()).anyMatch(p -> p.getPlayerId().equals(pid));
+    }
 
 
     public enum PlayerType {
@@ -258,10 +262,25 @@ public class Match implements Comparable<Match> {
     public enum GameState {
         INVALID(-1),
         AWAIT(0),
-        RUNNING(1),
-        ENDED(2);
+        READY(1),
+        RUNNING(2),
+        ENDED(3);
 
         GameState(int i) {
+            val = i;
+        }
+
+        final int val;
+    }
+
+    public enum PhaseType {
+        INVALID(-1),
+        MOVE(0),
+        PROMPT(1),
+        SIM(2),
+        ENDED(3);
+
+        PhaseType(int i) {
             val = i;
         }
 

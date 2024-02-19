@@ -22,16 +22,18 @@ public class BotPlayer extends Player {
     }
 
     public BotPlayer(int d, boolean dummy) {
-        this(UUID.randomUUID(), weightedRandom(new String[]{"Notbot", "Anna", "Heavy Weapons Guy", "Woz", "Jobim", "Jianyao", "Wil", "Mundy", "Lando", "Vinny", "Shogo", "Mugen", "Jar", "Isa", "Jeroo", "Ado", "Hal", "Mark", "Bird", "Onuki", "Minton", "Lorry", "Carton", "Gilbert", "The Legend", "Luya", "Nujabes", "Hubert", "Schudawg"}, new double[0], true), d, dummy);
+        this(UUID.randomUUID(), weightedRandom(new String[]{"Notbot", "Anna", "Heavy Weapons Guy", "Woz", "Jobim", "Jianyao", "Wil", "Mundy", "Lando", "Vinny", "Shogo", "Jar", "Isa", "Jeroo", "Ado", "Hal", "Mark", "Bird", "Onuki", "Minton", "Lorry", "Carton", "Gilbert", "The Legend", "Luya", "Hubert", "Schudawg"}, new double[0], true), d, dummy);
     }
 
     public BotPlayer(UUID pid, String name, int d, boolean dummy) {
         difficulty = d;
         isDummy = dummy;
+        isReady = true;
         health = 3;
         playerId = pid;
         playerName = name;
         pos = new Vector3(0,0,0);
+
     }
 
 

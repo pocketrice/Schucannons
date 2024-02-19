@@ -5,6 +5,7 @@ import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
 import io.github.pocketrice.client.*;
+import io.github.pocketrice.client.Match.GameState;
 import io.github.pocketrice.shared.KryoInitialiser;
 import io.github.pocketrice.shared.Request;
 import io.github.pocketrice.shared.Response;
@@ -16,10 +17,8 @@ import java.net.UnknownHostException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.Map.Entry;
 import java.util.stream.Collectors;
-
-import static io.github.pocketrice.shared.AnsiCode.ANSI_BLUE;
-import static io.github.pocketrice.shared.AnsiCode.ANSI_RESET;
 
 public class DedicatedServer extends GameServer {
     public static final int TICKS_PER_CHECK = 20;
@@ -69,8 +68,7 @@ public class DedicatedServer extends GameServer {
     public PlayerPayload findMostRecentPayload(UUID pid) {
         PlayerPayload pp = null;
         for (int i = 0; pp == null && i < inBuffer.size(); i++) {
-            if (((PlayerPayload) inBuffer.
-                    get(i)).getPlayerId().equals(pid)) {
+            if (((PlayerPayload) inBuffer.get(i)).getPlayerId().equals(pid)) {
                 pp = (PlayerPayload) inBuffer.get(i);
             }
         }
@@ -90,31 +88,59 @@ public class DedicatedServer extends GameServer {
                     if (obj instanceof Request rq) {
                         switch (rq.getMsg()) {
                             case "GC_matches" -> {
-                                System.out.println("GC_MATCHES");
+                                log("Matches requested from " + con);
                                 kryoServer.sendToTCP(con.getID(), new Response("GS_matches", mm.availableMatches.stream().map(Match::toString).collect(Collectors.joining("&"))));
                             }
 
                             case "GC_selMatch" -> {
-                                System.out.println("GC_SELMATCH");
                                 Object[] payload = (Object[]) rq.getPayload();
                                 UUID mid = UUID.fromString((String) payload[0]);
                                 Player player = (Player) payload[1];
 
                                 Match m = mm.findMatch(mid.toString());
+                                log("Match " + m + " selected by " + con);
                                 m.addPlayers(player);
                                 clientMap.putIfAbsent(mid, new HashSet<>());
                                 clientMap.get(mid).add(con);
 
+                                sendPlayerList(mid, con);
                                 kryoServer.sendToTCP(con.getID(), new Response("GS_selMatch", constructPayload(mid)));
-                                kryoServer.sendToTCP(con.getID(), new Response("GS_plList", Arrays.stream(m.players()).map(p -> p.getPlayerId() + "|" + p.getPlayerName()  + "|" + p.getClass().getSimpleName() + ((p instanceof BotPlayer) ? "|" + ((BotPlayer) p).getDifficulty() + "|" + ((BotPlayer) p).isDummy() : "")).collect(Collectors.joining("&"))));
                                 kryoServer.sendToTCP(con.getID(), new Response("GS_mid", m.getMatchId() + "|" + m.getMatchName()));
                             }
 
+                            case "GC_ready" -> {
+                                log("Received ready from " + con);
+                                String[] ids = ((String) rq.getPayload()).split("\\|");
+                                Match m = mm.findMatch(ids[0]);
+                                m.getPlayer(UUID.fromString(ids[1])).setReady(true);
+                                m.updateState();
+
+                                if (m.getGameState() == GameState.READY) {
+                                    sendToMatch(m.getMatchId(), new Response("GS_start", new Object[]{ GameSimulator.PROMPT_PHASE_SEC }));
+                                } else {
+                                    kryoServer.sendToTCP(con.getID(), new Response("GS_ackReady", null));
+                                }
+                            }
+
+                            case "GC_fillMatch" -> {
+                                log("Registering request to fill match with bot from " + con);
+                                UUID mid = UUID.fromString((String) rq.getPayload());
+                                Match m = mm.findMatch(mid.toString());
+                                m.addPlayers(new BotPlayer());
+                                m.updateState();
+                                sendPlayerList(mid, con);
+
+                                if (m.getGameState() == GameState.READY) {
+                                    sendToMatch(m.getMatchId(), new Response("GS_start", GameSimulator.PROMPT_PHASE_SEC));
+                                }
+
+                            }
+
                             case "GC_pp", "GC_ptp" -> // todo: correct?
-                                    receivePayload(rq.getPayload());
+                                receivePayload(rq.getPayload());
 
                             case "GC_ping" -> {
-                                System.out.println(ANSI_BLUE + "[GS] gc_ping received." + ANSI_RESET);
+                                logCon("gc_ping received.");
                                 kryoServer.sendToTCP(con.getID(), new Response("GS_ping", Instant.now() + "|" + serverName + "|" + tps));
                             }
 
@@ -133,7 +159,6 @@ public class DedicatedServer extends GameServer {
 
             while (true) {
                 tickCounter++;
-
                 /*
                  * TPS calculator
                  */
@@ -187,6 +212,16 @@ public class DedicatedServer extends GameServer {
         // TODO: disconnect client from krs :(
     }
 
+    public Match findMatchFromCon(Connection con) {
+        Set<Entry<UUID, Set<Connection>>> conMap = clientMap.entrySet();
+        UUID result = null;
+
+        for (Entry<UUID, Set<Connection>> conEntry : conMap) {
+            if (conEntry.getValue().contains(con)) result = conEntry.getKey();
+        }
+
+        return mm.findMatch(result.toString());
+    }
     @Override
     public void sendPayload(UUID mid) {
         ServerPayload sp = constructPayload(mid);
@@ -194,6 +229,11 @@ public class DedicatedServer extends GameServer {
         cleanBuffers();
         //System.out.println("GS_PL -> " + mid);
         sendToMatch(mid, new Response("GS_pl", sp));
+    }
+
+    public void sendPlayerList(UUID mid, Connection con) {
+        logInfo("" + mm.findMatch(mid.toString()));
+        kryoServer.sendToTCP(con.getID(), new Response("GS_plList", Arrays.stream(mm.findMatch(mid.toString()).players()).map(p -> p.getPlayerId() + "|" + p.getPlayerName()  + "|" + p.getClass().getSimpleName() + ((p instanceof BotPlayer) ? "|" + ((BotPlayer) p).getDifficulty() + "|" + ((BotPlayer) p).isDummy() : "")).collect(Collectors.joining("&"))));
     }
 
     public void sendToMatch(UUID mid, Response resp) {

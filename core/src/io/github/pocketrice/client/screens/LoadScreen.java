@@ -66,7 +66,7 @@ public class LoadScreen extends ScreenAdapter {
         if (loadMsg.equals("Loading....")) {
             loadMsg = "Loading";
         }
-        fontbook.draw("tf2build", 24, loadMsg, new Vector2(700,70));
+        fontbook.draw("tf2build", 24, loadMsg, new Vector2(760,70));
         batch.end();
 
         loadDelayFrames++;

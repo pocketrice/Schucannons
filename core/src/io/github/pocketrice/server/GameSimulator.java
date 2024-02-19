@@ -5,8 +5,11 @@ import com.badlogic.gdx.math.Vector3;
 import io.github.pocketrice.client.Player;
 import io.github.pocketrice.server.Prysm.ForceConstant;
 
-// all physics crap goes here. Shouldn't be coupled to a match, instead takes in locs n' crap.
+// all physics crap goes here. Shouldn't be coupled to a match, instead takes in locs n' crap. It also manages turn/match logic,
+// broadcasting to clients TurnState and GameState.
 public class GameSimulator {
+    static final int MOVE_PHASE_SEC = 30, PROMPT_PHASE_SEC = 120, SIM_PHASE_SEC = 60;
+    static final float MOVE_PHASE_MAX_DIST = 10f;
 
     public Vector3 projMot(Vector3 projVec, Vector3 currLoc, float t) {
         // ∆x = v0x*t

@@ -25,6 +25,7 @@ public class HumanPlayer extends Player {
         playerName = name;
         pos = new Vector3(0,0,0);
         projVector = new Vector3(0,0,0);
+        isReady = false;
     }
 
     public SpectatorPlayer convertSpec() {

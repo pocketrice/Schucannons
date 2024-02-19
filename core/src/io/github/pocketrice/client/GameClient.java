@@ -12,6 +12,8 @@ import java.net.UnknownHostException;
 import java.time.Instant;
 import java.util.LinkedList;
 
+import static io.github.pocketrice.shared.AnsiCode.*;
+
 @Getter
 public abstract class GameClient {
     public static final long PING_INTERVAL = 2000;
@@ -73,6 +75,26 @@ public abstract class GameClient {
     abstract PlayerPayload constructPayload();
     abstract PlayerTurnPayload constructTurnPayload();
     abstract Response receivePayload(Object obj); // acknowledge received payload?? needed?
+
+    public void log(String msg) {
+        System.out.println("[GC] " + msg);
+    }
+
+    public void logErr(String msg) {
+        System.out.println(ANSI_RED + "<!> [GC] " + msg + ANSI_RESET);
+    }
+
+    public void logWarn(String msg) {
+        System.out.println(ANSI_YELLOW + "<?> [GC] " + msg + ANSI_RESET);
+    }
+
+    public void logInfo(String msg) {
+        System.out.println(ANSI_BLUE + "<-> [GC] " + msg + ANSI_RESET);
+    }
+
+    public void logCon(String msg) {
+        System.out.println(ANSI_PURPLE + "<x> [GC] " + msg + ANSI_RESET);
+    }
 
     @Override
     public String toString() {

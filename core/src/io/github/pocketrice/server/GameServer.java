@@ -13,6 +13,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
 
+import static io.github.pocketrice.shared.AnsiCode.*;
+import static io.github.pocketrice.shared.AnsiCode.ANSI_RESET;
+
 @Getter
 public abstract class GameServer {
     List<GameClient> clients;
@@ -70,6 +73,26 @@ public abstract class GameServer {
 
     public abstract ServerPayload constructPayload(UUID mid);
     public abstract Response receivePayload(Object obj); // acknowledge received payload?? needed?
+
+    public void log(String msg) {
+        System.out.println("[GS] " + msg);
+    }
+
+    public void logErr(String msg) {
+        System.out.println(ANSI_RED + "<!> [GS] " + msg + ANSI_RESET);
+    }
+
+    public void logWarn(String msg) {
+        System.out.println(ANSI_YELLOW + "<?> [GS] " + msg + ANSI_RESET);
+    }
+
+    public void logInfo(String msg) {
+        System.out.println(ANSI_BLUE + "<-> [GS] " + msg + ANSI_RESET);
+    }
+
+    public void logCon(String msg) {
+        System.out.println(ANSI_PURPLE + "<x> [GS] " + msg + ANSI_RESET);
+    }
 
     @Override
     public String toString() {

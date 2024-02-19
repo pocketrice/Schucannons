@@ -10,8 +10,11 @@ import java.util.List;
 import java.util.Map;
 
 public class Audiobox {
+    static final float MASTER_VOLUME = 0.2f;
+
     Map<String, Sound> sfxs;
     Map<String, Music> bgms;
+
 
     public Audiobox() {
         sfxs = new HashMap<>();
@@ -52,12 +55,12 @@ public class Audiobox {
 
     public void playSfx(String sfx, float volume) {
         Sound sound = getFuzzySfx(sfx);
-        sound.play(volume);
+        sound.play(volume * MASTER_VOLUME);
     }
 
     public void playBgm(String bgm, float volume) {
         Music music = getFuzzyBgm(bgm);
-        music.setVolume(volume);
+        music.setVolume(volume * MASTER_VOLUME);
         music.play();
     }
 
@@ -73,6 +76,8 @@ public class Audiobox {
 
         return abox;
     }
+
+
 
     public void dispose() {
         sfxs.values().forEach(Sound::dispose);

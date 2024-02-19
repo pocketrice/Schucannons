@@ -24,12 +24,10 @@ import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.JsonReader;
-import com.badlogic.gdx.utils.viewport.Viewport;
 import io.github.pocketrice.client.Audiobox;
 import io.github.pocketrice.client.Fontbook;
 import io.github.pocketrice.client.SchuGame;
 import io.github.pocketrice.client.ui.SchuButton;
-import io.github.pocketrice.shared.EasingFunction;
 import io.github.pocketrice.shared.LinkInterlerper;
 import net.mgsx.gltf.loaders.glb.GLBLoader;
 import net.mgsx.gltf.loaders.gltf.GLTFLoader;
@@ -38,6 +36,11 @@ import java.util.Arrays;
 import java.util.List;
 
 public class MenuScreen extends ScreenAdapter {
+    static final Model PANO_MODEL = loadModel(Gdx.files.internal("models/schupano.obj"));
+
+    final Fontbook fontbook = Fontbook.of("tinyislanders.ttf", "koholint.ttf");
+    final Audiobox audiobox = Audiobox.of(List.of("buttonclick.ogg", "buttonclickrelease.ogg", "buttonrollover.ogg", "hint.ogg", "notification_alert.ogg"), List.of());
+
     SpriteBatch sprBatch;
     ModelBatch modelBatch;
     OrthographicCamera ocam;
@@ -45,8 +48,6 @@ public class MenuScreen extends ScreenAdapter {
     Stage stage;
     Environment env;
     ModelInstance panoMi;
-    Fontbook fontbook;
-    Audiobox audiobox;
     SchuGame game;
 
     LinkInterlerper<Float, Object[]> interlerpTitleFade;
@@ -56,10 +57,7 @@ public class MenuScreen extends ScreenAdapter {
     Table matchlistBtns;
     boolean isUILoaded; // TEMP
 
-
-
-    public static final Model PANO_MODEL = loadModel(Gdx.files.internal("models/schupano.obj"));
-    public MenuScreen(SchuGame sg, Viewport vp) {
+    public MenuScreen(SchuGame sg) {
         sprBatch = new SpriteBatch();
         modelBatch = new ModelBatch();
         ocam = new OrthographicCamera();
@@ -76,14 +74,12 @@ public class MenuScreen extends ScreenAdapter {
         env.add(new DirectionalLight().set(0.6f, 0.3f, 1.1f, 1f, -0.5f, 0f));
         env.add(new DirectionalLight().set(0.8f, 0.3f, 0.4f, 0f, 0.5f, 0f));
 
-        fontbook = Fontbook.of("tinyislanders.ttf", "koholint.ttf");
         fontbook.setBatch(sprBatch);
-        audiobox = Audiobox.of(List.of("buttonclick.ogg", "buttonclickrelease.ogg", "buttonrollover.ogg", "hint.ogg", "notification_alert.ogg"), List.of());
         game = sg;
-        stage = new Stage(vp);
+        stage = new Stage();
 
-        matchlistBtns = new Table();
-        matchlistBtns.setPosition(200, 500);
+        matchlistBtns = new Table().left();
+        matchlistBtns.setPosition(70, 520);
         stage.addActor(matchlistBtns);
 
 
@@ -107,18 +103,24 @@ public class MenuScreen extends ScreenAdapter {
         modelBatch.end();
 
         sprBatch.begin();
-        fontbook.draw("tinyislanders", 40, "Select a match...", new Vector2(20,700));
+        fontbook.draw("tinyislanders", 40, "Select a match...", new Vector2(50,700));
         if (game.getGmgr().getMatchlist() == null) { // todo: only request once
             game.getGmgr().requestMatchlist();
         } else {
             if (!isUILoaded) {
-                schubs = Arrays.stream(game.getGmgr().getMatchlist()).map(m -> new SchuButton(game.getGmgr(), audiobox, fontbook, m, new Skin(Gdx.files.internal("skins/onett/skin/terra-mother-ui.json")))).toList();
+                schubs = Arrays.stream(game.getGmgr().getMatchlist())
+                        .map(m -> new SchuButton(game.getGmgr(), audiobox, fontbook, m, new Skin(Gdx.files.internal("skins/onett/skin/terra-mother-ui.json"))))
+                        .toList();
+
                 schubs.forEach(schub -> {
                     schub.getTbs().font = fontbook.getSizedBitmap("koholint", 21);
                     schub.getTbs().fontColor = Color.valueOf("#afafdd");
                     schub.setStyle(schub.getTbs());
-                    matchlistBtns.add(schub).align(Align.left).padBottom(8f);
+                    matchlistBtns.add(schub).align(Align.left).padBottom(8f).padRight(20f);
+                    matchlistBtns.add(schub.getLabelMatchPeek()).align(Align.left).padBottom(8f);
                     matchlistBtns.row();
+                    Color labelCol = schub.getLabelMatchPeek().getColor();
+                    schub.getLabelMatchPeek().setColor(labelCol.r, labelCol.g, labelCol.b, 0f); // Set relative opacity to 0.
                 });
 
                 System.out.println("btns loaded stupid >:(");
@@ -127,15 +129,9 @@ public class MenuScreen extends ScreenAdapter {
         }
         if (isUILoaded) {
             schubs.forEach((schub) -> {
-                LinkInterlerper<Color, ? super SchuButton> interlerpColor = schub.getInterlerpColor();
-                LinkInterlerper<Integer, ? super SchuButton> interlerpFontSize = schub.getInterlerpFontSize();
-                if (interlerpFontSize.isInterlerp()) {
-                    interlerpFontSize.step(0.04f, EasingFunction.EASE_IN_OUT_SINE);
-                }
-
-                if (interlerpColor.isInterlerp()) {
-                    interlerpColor.step(0.04f, EasingFunction.EASE_IN_OUT_SINE);
-                }
+                schub.getInterlerpColor().step();
+                schub.getInterlerpFontSize().step();
+                schub.getInterlerpLabelOpacity().step();
             });
         }
 

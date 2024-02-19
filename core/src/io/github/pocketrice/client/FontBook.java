@@ -7,6 +7,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.math.Vector2;
 import io.github.pocketrice.shared.FuzzySearch;
+import lombok.Getter;
 import org.javatuples.Triplet;
 
 import java.util.ArrayList;
@@ -18,6 +19,7 @@ import java.util.TreeMap;
 public class Fontbook {
     List<FreeTypeFontGenerator> ftfs;
     Map<Integer, List<BitmapFont>> bmfCache;
+    @Getter
     Triplet<String, Integer, Color> presetSettings;
     SpriteBatch presetBatch;
 
@@ -41,6 +43,10 @@ public class Fontbook {
     }
 
     public BitmapFont getSizedBitmap(String name, int fontSize) {
+        return getSizedBitmap(name, fontSize, null);
+    }
+
+    public BitmapFont getSizedBitmap(String name, int fontSize, Color color) {
         BitmapFont result;
 
         List<BitmapFont> bmfs = bmfCache.getOrDefault(fontSize, List.of());
@@ -51,6 +57,7 @@ public class Fontbook {
             FreeTypeFontGenerator ftfg = getFuzzyFont(name);
             FreeTypeFontGenerator.FreeTypeFontParameter ftparam = new FreeTypeFontGenerator.FreeTypeFontParameter();
             ftparam.size = fontSize;
+            if (color != null) ftparam.color = color;
             result = ftfg.generateFont(ftparam);
 
             bmfCache.putIfAbsent(fontSize, new ArrayList<>());

@@ -3,6 +3,7 @@ package io.github.pocketrice.client;
 import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
+import io.github.pocketrice.client.Match.PhaseType;
 import io.github.pocketrice.server.ServerPayload;
 import io.github.pocketrice.shared.KryoInitialiser;
 import io.github.pocketrice.shared.Request;
@@ -19,17 +20,15 @@ import java.time.temporal.ChronoUnit;
 import java.util.LinkedList;
 import java.util.UUID;
 
-import static io.github.pocketrice.shared.AnsiCode.ANSI_BLUE;
-import static io.github.pocketrice.shared.AnsiCode.ANSI_RESET;
-
 
 public class SchuClient extends GameClient {
+    static final int AWAIT_MAX_SEC = 30;
+
     GameManager gmgr;
     @Setter
     UUID matchId;
     @Setter
     boolean isMatchStarted;
-
 
 
     public SchuClient(GameManager gm) throws UnknownHostException {
@@ -99,13 +98,32 @@ public class SchuClient extends GameClient {
 
                                 serverTps = Double.parseDouble(payload[2]);
 
-                                System.out.print(ANSI_BLUE + "[GC] gs_ping received. " + pingToServer + "ms (c-s), " + pingToClient + "ms (s-c), ");
-                                System.out.println(ping + "ms (total)" + "\n" + ANSI_RESET);
+                               logCon("gs_ping received. " + pingToServer + "ms (c-s), " + pingToClient + "ms (s-c), " + ping + "ms (total)");
 
                                 if (!serverName.equals(payload[1])) {
                                     serverAddress = kryoClient.getRemoteAddressTCP();
                                     serverName = payload[1];
                                 }
+                            }
+
+                            case "GS_start" -> {
+                                log("Match starting!");
+                                gmgr.processStart();
+                            }
+
+                            case "GS_promptPhase" -> {
+                                log("Prompt phase starting...");
+                                gmgr.receivePhaseSignal(rp.getPayload(), PhaseType.PROMPT);
+                            }
+
+                            case "GS_simPhase" -> {
+                                log ("Sim phase starting...");
+                                gmgr.receivePhaseSignal(rp.getPayload(), PhaseType.SIM);
+                            }
+
+                            case "GS_ackReady" -> {
+                                log("Received acknowledgment of ready.");
+                                gmgr.processReadyAck();
                             }
 
                             default -> throw new IllegalArgumentException("Invalid server response — " + rp.getMsg() + "!");
@@ -137,6 +155,14 @@ public class SchuClient extends GameClient {
                     }
 
                     sendPayload();
+                }
+
+
+                // Request to server to fill match w/ a bot
+                if (gmgr.getJoinInstant() != null && ChronoUnit.SECONDS.between(gmgr.getJoinInstant(), Instant.now()) > AWAIT_MAX_SEC) {
+                    log(AWAIT_MAX_SEC + " sec elapsed without other player. Requesting bot player...");
+                    gmgr.setJoinInstant(null);
+                    kryoClient.sendTCP(new Request("GC_fillMatch", gmgr.getMatchState().getMatchId().toString()));
                 }
             }
         });

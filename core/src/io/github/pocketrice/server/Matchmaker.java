@@ -2,7 +2,6 @@ package io.github.pocketrice.server;
 
 import com.github.javafaker.Faker;
 import io.github.pocketrice.client.BotPlayer;
-import io.github.pocketrice.client.HumanPlayer;
 import io.github.pocketrice.client.Match;
 import io.github.pocketrice.client.Player;
 
@@ -26,8 +25,8 @@ public class Matchmaker {
 
            if (rng.nextBoolean()) {
                double val = rng.nextDouble();
-               for (int j = 0; j < Math.round(val * 10); j++)
-                   startMatches[i].addPlayers((rng.nextBoolean() ? new HumanPlayer() : new BotPlayer()));
+               for (int j = 0; j < Math.round(val * 3); j++)
+                   startMatches[i].addPlayers(new BotPlayer());
            }
 
            startMatches[i].setMatchName(Faker.instance().food().spice().replaceAll("(China |Chinese |Chinese 5 |Mexican |Self Adhesive |Thai )", "").split(" ")[0] + " " + Faker.instance().hobbit().character().replaceAll("(The |Great )", "").split(" ")[0]); // insert obligatory commentary on blasé unfairness w/ titles and nobles, blah blah...
@@ -41,7 +40,6 @@ public class Matchmaker {
     }
 
     public Match findMatch(String identifier) {
-
         for (Match m : matches) {
             if (m.getMatchId().toString().equals(identifier) || m.getMatchName().equals(identifier)) return m;
         }

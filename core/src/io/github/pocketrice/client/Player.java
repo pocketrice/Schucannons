@@ -19,7 +19,8 @@ public abstract class Player {
     UUID playerId;
     @Setter
     String playerName;
-    boolean isRefused;
+    @Setter
+    boolean isRefused, isReady;
 
 
     public abstract void deductHealth();

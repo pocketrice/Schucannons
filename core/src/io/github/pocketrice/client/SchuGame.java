@@ -7,14 +7,12 @@ import io.github.pocketrice.client.screens.MenuScreen;
 import io.github.pocketrice.server.DedicatedServer;
 import io.github.pocketrice.server.GameServer;
 import lombok.Getter;
-
-import static io.github.pocketrice.shared.AnsiCode.*;
+import lombok.Setter;
 
 // TODO: AWFUL memory leaks abound, pls fix
 
 public class SchuGame extends Game {
 	public static final int VIEWPORT_WIDTH = 960, VIEWPORT_HEIGHT = 880;
-	public static final boolean IS_DEBUG = true;
 
 	private Viewport vp;
 	private SchuClient sclient;
@@ -22,13 +20,14 @@ public class SchuGame extends Game {
 	private GameRenderer grdr;
 	@Getter
 	private GameManager gmgr;
+	@Getter @Setter
+	boolean isDebug;
 
 
 	@Override
 	public void create() {
-		if (IS_DEBUG) System.out.println(ANSI_YELLOW + "<!> Debug mode enabled.\n\n" + ANSI_RESET);
 		vp = new FillViewport(VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
-		gmgr = new GameManager();
+		gmgr = new GameManager(this);
 		grdr = new GameRenderer(gmgr);
 
 		try {
@@ -46,7 +45,7 @@ public class SchuGame extends Game {
 		gmgr.setClient(sclient);
 		gmgr.setGrdr(grdr);
 
-		setScreen(new MenuScreen(this, vp));
+		setScreen(new MenuScreen(this));
 	}
 
 	@Override

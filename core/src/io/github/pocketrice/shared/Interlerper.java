@@ -4,19 +4,36 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import lombok.Getter;
+import lombok.Setter;
 
 // Utility class for handling interp for many different datatype. DEPRECATED!
 @Getter
 public class Interlerper<T> {
     private T startVal, endVal;
+    private EasingFunction easing;
     private double t;
+    @Getter @Setter
+    private boolean isLooping, isInterlerp, isForward;
+    @Setter
+    private double stepSize;
+
 
 
     public Interlerper(T start, T end) {
+        this(start, end, EasingFunction.LINEAR, 0.2);
+    }
+
+    public Interlerper(T start, T end, EasingFunction e, double ss) {
         startVal = start;
         endVal = end;
         t = 0;
+        isLooping = false;
+        isInterlerp = true;
+        isForward = true;
+        easing = e;
+        stepSize = ss;
     }
+
 
     public Interlerper<T> from(T val) {
         startVal = val;
@@ -32,9 +49,14 @@ public class Interlerper<T> {
         T result = null;
 
         if (startVal instanceof Integer) {
-            int startNum = ((Number) startVal).intValue();
-            int endNum = ((Number) endVal).intValue();
+            int startNum = (Integer) startVal;
+            int endNum = (Integer) endVal;
             result = (T) (Integer) ((Double) (startNum + easing.apply(t) * (endNum - startNum))).intValue(); // what black magic is this??
+        }
+        else if (startVal instanceof Float) {
+            float startNum = (float) startVal;
+            float endNum = (float) endVal;
+            result = (T) (Float) ((Double) (startNum + easing.apply(t) * (endNum - startNum))).floatValue();
         }
         else if (startVal instanceof Color startColor) {
             Color endColor = (Color) endVal;
@@ -62,13 +84,17 @@ public class Interlerper<T> {
     }
 
 
-    public double advanceParam(double stepSize, boolean isForward) {
-        t = (isForward) ? Math.min(1.0, t + stepSize) : Math.max(0, t - stepSize); // EVIL BUG!!!!11!!! The fabled "min-max flip flop" bug. Total of 2 hours spent debugging. Cheeeeers! :DD
+    public double advanceParam() {
+        if (isLooping) {
+            t = (isForward) ? (t + stepSize) % 1 : (t - stepSize) % 1;
+        } else {
+            t = (isForward) ? Math.min(1.0, t + stepSize) : Math.max(0, t - stepSize); // EVIL BUG!!!!11!!! The fabled "min-max flip flop" bug. Total of 2 hours spent debugging. Cheeeeers! :DD
+        }
         return t;
     }
     // Value-only interlerp; useful for lighter uses of interlerp.
-    public T advance(double stepSize, boolean isForward, EasingFunction easing) {
-        advanceParam(stepSize, isForward);
+    public T advance() {
+        advanceParam();
         return interlerp(t, easing);
     }
 }

@@ -1,0 +1,12 @@
+main.png
+size: 935, 267
+format: RGBA8888
+filter: Linear,Linear
+repeat: none
+flourish
+  rotate: false
+  xy: 0, 0
+  size: 935, 267
+  orig: 935, 267
+  offset: 0, 0
+  index: -1
