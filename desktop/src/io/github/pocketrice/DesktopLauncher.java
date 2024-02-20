@@ -12,11 +12,12 @@ public class DesktopLauncher {
 	public static void main (String[] arg) {
 		Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
 		config.setForegroundFPS(120);
+		config.setIdleFPS(30);
 		config.setTitle("Schucannons");
 		config.setBackBufferConfig(8,8,8,8, 24, 0, 4);
 //		config.setHdpiMode(HdpiMode.Pixels);
 		config.setWindowedMode(VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
-		config.setResizable(true);
+		config.setResizable(false);
 		new Lwjgl3Application(new SchuGame(), config);
 	}
 }

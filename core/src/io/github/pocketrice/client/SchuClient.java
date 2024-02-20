@@ -20,16 +20,17 @@ import java.time.temporal.ChronoUnit;
 import java.util.LinkedList;
 import java.util.UUID;
 
+import static io.github.pocketrice.client.GameManager.MATCH_START_MAX_DELAY_SEC;
+
 
 public class SchuClient extends GameClient {
-    static final int AWAIT_MAX_SEC = 30;
+    static final int AWAIT_MAX_SEC = 10;
 
     GameManager gmgr;
     @Setter
     UUID matchId;
     @Setter
-    boolean isMatchStarted;
-
+    boolean isMatchJoined, isMatchStarted;
 
     public SchuClient(GameManager gm) throws UnknownHostException {
         this(gm, 3074);
@@ -50,10 +51,13 @@ public class SchuClient extends GameClient {
         inBuffer = new LinkedList<>();
         outBuffer = new LinkedList<>();
 
+        isMatchJoined = false;
         isMatchStarted = false;
 
         clientRate = calcClientRate();
         maxIBufferSize = maxOBufferSize = 10;
+
+        logInfo("Client " + this + " loaded.");
     }
 
     public int calcClientRate() {
@@ -106,9 +110,9 @@ public class SchuClient extends GameClient {
                                 }
                             }
 
-                            case "GS_start" -> {
-                                log("Match starting!");
-                                gmgr.processStart();
+                            case "GS_prestart" -> {
+                                log("Match prestarting!");
+                                gmgr.processPrestart();
                             }
 
                             case "GS_promptPhase" -> {
@@ -146,7 +150,7 @@ public class SchuClient extends GameClient {
                     throw new RuntimeException(e);
                 }
 
-                if (isMatchStarted) {
+                if (isMatchJoined) {
                     millisSincePing += 1000 / clientRate;
 
                     if (millisSincePing > PING_INTERVAL) {
@@ -163,6 +167,11 @@ public class SchuClient extends GameClient {
                     log(AWAIT_MAX_SEC + " sec elapsed without other player. Requesting bot player...");
                     gmgr.setJoinInstant(null);
                     kryoClient.sendTCP(new Request("GC_fillMatch", gmgr.getMatchState().getMatchId().toString()));
+                }
+
+                if (gmgr.getStartInstant() != null && ChronoUnit.SECONDS.between(gmgr.getStartInstant(), Instant.now()) > MATCH_START_MAX_DELAY_SEC && !isMatchStarted) {
+                    isMatchStarted = true;
+                    kryoClient.sendTCP(new Request("GC_start", gmgr.getMatchState().getMatchId().toString()));
                 }
             }
         });

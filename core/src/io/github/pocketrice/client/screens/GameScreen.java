@@ -2,16 +2,18 @@ package io.github.pocketrice.client.screens;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.ScreenAdapter;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import io.github.pocketrice.client.Audiobox;
 import io.github.pocketrice.client.Fontbook;
 import io.github.pocketrice.client.GameManager;
 import io.github.pocketrice.client.GameRenderer;
-import io.github.pocketrice.client.ui.ReadyButton;
+import io.github.pocketrice.client.ui.OkButton;
 import lombok.Setter;
 
 import java.util.List;
@@ -25,22 +27,22 @@ public class GameScreen extends ScreenAdapter {
     private GameRenderer grdr;
     private GameManager gmgr;
     private Stage stage;
-
-    private ReadyButton rb;
+    private OkButton btnOk;
     @Setter
     private boolean isPromptReady; // terrible
 
     public GameScreen(GameRenderer gr, GameManager gm) {
         batch = new SpriteBatch();
         camera = new OrthographicCamera();
+
         grdr = gr;
         gmgr = gm;
         fontbook.setBatch(batch);
 
-        rb = new ReadyButton(gm, this, audiobox, fontbook, new Skin(Gdx.files.internal("skins/onett/skin/terra-mother-ui.json")));
-        rb.setPosition(Gdx.graphics.getWidth() / 2f, Gdx.graphics.getHeight() / 2f);
+        btnOk = new OkButton(gm, this, audiobox, fontbook, new Skin(Gdx.files.internal("skins/onett/skin/terra-mother-ui.json")));
+        btnOk.setPosition(Gdx.graphics.getWidth() / 2f - 30f, Gdx.graphics.getHeight() / 2f - 90f);
         stage = new Stage();
-        stage.addActor(rb);
+        stage.addActor(btnOk);
     }
 
     @Override
@@ -56,9 +58,20 @@ public class GameScreen extends ScreenAdapter {
         grdr.render();
 
         if (isPromptReady) {
+            if (!grdr.isPromptBlur()) {
+                grdr.setPromptBlur(true);
+                fontbook.font("tf2segundo").fontColor(Color.valueOf("#a2a0ddc0")).fontSize(40);
+            }
+
             batch.begin();
-            rb.draw(batch, 1f);
+            fontbook.draw("All ready?", new Vector2(Gdx.graphics.getWidth() / 2f - 70f, Gdx.graphics.getHeight() / 2f + 70f));
+            btnOk.draw(batch, 1f);
             batch.end();
+
+
+
+        } else {
+            if (grdr.isPromptBlur()) grdr.setPromptBlur(false);
         }
 
         stage.act();
@@ -66,6 +79,7 @@ public class GameScreen extends ScreenAdapter {
 
     public void finishPrompt() {
         isPromptReady = false;
+        grdr.setPromptBlur(false);
         Gdx.input.setInputProcessor(grdr.getInputMult());
     }
 

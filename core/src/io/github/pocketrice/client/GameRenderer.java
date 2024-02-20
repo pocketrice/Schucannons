@@ -15,18 +15,21 @@ import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.utils.CameraInputController;
 import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.graphics.glutils.GLFrameBuffer.FrameBufferBuilder;
-import com.badlogic.gdx.graphics.glutils.ShaderProgram;
 import com.badlogic.gdx.math.Quaternion;
 import com.badlogic.gdx.math.Vector3;
-import com.badlogic.gdx.utils.GdxRuntimeException;
 import com.badlogic.gdx.utils.IntSet;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.crashinvaders.vfx.VfxManager;
+import com.crashinvaders.vfx.effects.ChainVfxEffect;
 import com.crashinvaders.vfx.effects.FilmGrainEffect;
-import io.github.pocketrice.client.effects.FastDistortEffect;
+import io.github.pocketrice.client.render.BlurPostProcessor;
+import io.github.pocketrice.client.render.effects.AsciiEffect;
+import io.github.pocketrice.client.render.effects.FastDistortEffect;
+import io.github.pocketrice.client.render.effects.HalftoneEffect;
 import io.github.pocketrice.client.ui.HUD;
 import io.github.pocketrice.shared.Interlerper;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.util.List;
 import java.util.UUID;
@@ -38,18 +41,23 @@ import static io.github.pocketrice.client.screens.MenuScreen.loadModel;
 // Turns backend logic into glorious rendering. As in, take crap from GameManager that's from the server and move stuff around. All rendering is ONLY in this class.
 // This should only be used for GameScreen.
 public class GameRenderer {
-    private final Audiobox audiobox = Audiobox.of(List.of("hitsound.ogg", "duel_challenge.ogg", "vote_started.ogg"), List.of());
+    final Audiobox audiobox = Audiobox.of(List.of("hitsound.ogg", "duel_challenge.ogg", "vote_started.ogg"), List.of());
     ModelGroup cannonA, cannonB;
     ModelInstance envMi, projMi, skyMi;
     ModelBatch modelBatch;
 
     @Getter
     SpriteBatch postBatch;
+    BlurPostProcessor postprocBlur;
+    FrameBuffer fbo;
     @Getter
     VfxManager vfxManager;
-    FrameBuffer fbo;
-    FrameBuffer blurTrgtA, blurTrgtB, distortTarget;
-    ShaderProgram blurShader, defaultShader;
+    FilmGrainEffect vfxFilmGrain;
+    FastDistortEffect vfxFastDistort;
+    HalftoneEffect vfxHalftone;
+    AsciiEffect vfxAscii;
+
+
     @Getter
     Camera gameCam;
     @Getter
@@ -62,11 +70,9 @@ public class GameRenderer {
     Environment env;
     GameManager gmgr;
 
-    boolean isPaused, isPauseFirstPass;
-    int pingPongCount; // Higher val = greater GPU cost
-    float time;
-
-    static final float MAX_BLUR = 4f;
+    boolean isPaused, isPauseFirstPass, isEffectsUpdated;
+    @Getter @Setter
+    boolean isPromptBlur;
 
 
     public static final Model ENV_MODEL = loadModel(Gdx.files.internal("models/terrain.glb"));
@@ -86,13 +92,17 @@ public class GameRenderer {
         projMi.transform.scl(10f);
 
         postBatch = new SpriteBatch();
+        postprocBlur = new BlurPostProcessor(15, 4f, 0.3f, postBatch);
         vfxManager = new VfxManager(Pixmap.Format.RGBA8888);
-        defaultShader = postBatch.getShader();
-        blurShader = buildShader("shaders/blur.vert", "shaders/blur.frag");
-
         vfxManager.setBlendingEnabled(true);
-        vfxManager.addEffect(new FastDistortEffect());
-        vfxManager.addEffect(new FilmGrainEffect());
+        vfxFilmGrain = new FilmGrainEffect();
+        vfxFastDistort = new FastDistortEffect();
+        vfxAscii = new AsciiEffect();
+        vfxHalftone = new HalftoneEffect();
+        vfxManager.addEffect(vfxFilmGrain, 0);
+        vfxManager.addEffect(vfxFastDistort, 1);
+        vfxManager.addEffect(vfxAscii, 2);
+        vfxManager.addEffect(vfxHalftone, 3);
 
 
         cannonA = new ModelGroup();
@@ -163,7 +173,7 @@ public class GameRenderer {
             }
         };
 
-        inputMult = new InputMultiplexer(inputCic, inputKbAdapter);
+        inputMult = new InputMultiplexer(hud.getStage(), inputCic, inputKbAdapter);
 
         env = new Environment();
         env.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.5f, 0.5f, 0.7f, 1.5f));
@@ -171,82 +181,66 @@ public class GameRenderer {
         env.add(new DirectionalLight().set(0.4f, 0.4f, 0.4f, 0f, 0.5f, 0f));
 
         isPaused = false;
-        pingPongCount = 6;
-        time = 0f;
+        isPromptBlur = false;
+        isEffectsUpdated = false;
     }
 
-    // adapted from JamesTKhan shader tutorial
-    private ShaderProgram buildShader(String vertPath, String fragPath) {
-        String vert = Gdx.files.internal(vertPath).readString();
-        String frag = Gdx.files.internal(fragPath).readString();
-        return compileShader(vert, frag);
-    }
 
-    private ShaderProgram compileShader(String vertCode, String fragCode) {
-        ShaderProgram program = new ShaderProgram(vertCode, fragCode);
-
-        if (!program.isCompiled()) {
-            throw new GdxRuntimeException(program.getLog());
-        }
-
-        return program;
-    }
-
-//    private ShaderProgram buildShader(String glslPath) {
-//        String[] shaders = extractShaders(Gdx.files.internal(glslPath).readString());
-//        ShaderProgram program = new ShaderProgram(shaders[0], shaders[1]);
-//
-//        if (!program.isCompiled()) {
-//            throw new GdxRuntimeException(program.getLog());
-//        }
-//
-//        return program;
-//    }
-//
-//    private String[] extractShaders(String shaderCode) {
-//        int fragmentStart = shaderCode.indexOf("#elif defined(FRAGMENT)"); // may also be #ifdef FRAGMENT.
-//        return new String[]{ shaderCode.substring(0, fragmentStart), shaderCode.substring(fragmentStart)};
-//    }
 
     public void render() {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
         gameCam.update();
         inputCic.update();
 
-        time += Gdx.graphics.getDeltaTime();
-
         if (isPaused) {
             fbo.begin();
             renderScene();
             fbo.end();
 
-
-            // Get color texture from frame buffer
-            Texture fboTex = fbo.getColorBufferTexture();
-
-            // Apply blur and retrieve texture
-            Texture blurResult = postProcessTexture(fboTex);
-
+            vfxHalftone.setSegs(140f);
+            vfxHalftone.setOpacity(0.2f);
+            setVfx(vfxManager, vfxFilmGrain, vfxFastDistort, vfxHalftone, vfxAscii);
             vfxManager.update(Gdx.graphics.getDeltaTime());
             vfxManager.cleanUpBuffers();
             vfxManager.beginInputCapture();
 
             postBatch.begin();
-            postBatch.draw(blurResult, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), 0, 0, 1, 1);
+            postBatch.draw(fbo.getColorBufferTexture(), 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), 0, 0, 1, 1);
             postBatch.end();
 
             vfxManager.endInputCapture();
             vfxManager.applyEffects();
             vfxManager.renderToScreen();
 
-        } else {
+        }
+        else if (isPromptBlur) {
+            fbo.begin();
+            renderScene();
+            fbo.end();
+
+            Texture ppBlur = postprocBlur.render(fbo);
+            vfxHalftone.setSegs(70f);
+            vfxHalftone.setOpacity(0.1f);
+            setVfx(vfxManager, vfxHalftone);
+            vfxManager.update(Gdx.graphics.getDeltaTime());
+            vfxManager.cleanUpBuffers();
+            vfxManager.beginInputCapture();
+
+            postBatch.begin();
+            postBatch.draw(ppBlur, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), 0, 0, 1, 1);
+            postBatch.end();
+
+            vfxManager.endInputCapture();
+            vfxManager.applyEffects();
+            vfxManager.renderToScreen();
+        }
+        else {
             renderScene();
         }
-
     }
 
     private void renderScene() {
-        ScreenUtils.clear(Color.BLUE, true);
+        ScreenUtils.clear(Color.valueOf("#4d4a71"), true);
         modelBatch.begin(gameCam);
         modelBatch.render(envMi, env);
         cannonA.render(modelBatch);
@@ -254,46 +248,6 @@ public class GameRenderer {
         modelBatch.render(projMi, env);
         modelBatch.end();
         hud.render();
-    }
-
-    private Texture postProcessTexture(Texture fboTex) {
-        postBatch.setShader(blurShader);
-
-        for (int i = 0; i < pingPongCount; i++) {
-            // Horizontal blur pass
-            blurTrgtA.begin();
-            postBatch.begin();
-            blurShader.setUniformf("dir", 0.5f, 0); // horizontal dir
-            blurShader.setUniformf("radius",  MAX_BLUR);
-            blurShader.setUniformf("resolution", Gdx.graphics.getWidth());
-            postBatch.draw((i == 0) ? fboTex : blurTrgtB.getColorBufferTexture(), 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), 0, 0, 1, 1);
-            postBatch.end();
-            blurTrgtA.end();
-
-            // Vertical blur pass
-            blurTrgtB.begin();
-            postBatch.begin();
-            blurShader.setUniformf("dir", 0, 0.5f);
-            blurShader.setUniformf("radius", MAX_BLUR);
-            blurShader.setUniformf("resolution", Gdx.graphics.getHeight());
-            postBatch.draw(blurTrgtA.getColorBufferTexture(), 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), 0, 0, 1, 1);
-            postBatch.end();
-            blurTrgtB.end();
-        }
-
-//        ShaderProgram.pedantic = false;
-//        postBatch.setShader(fastDistortShader);
-//        fastDistortShader.bind();
-//        fastDistortShader.setUniformf("u_time", time);
-//        distortTarget.begin();
-//        postBatch.begin();
-//        postBatch.draw(blurTrgtB.getColorBufferTexture(), 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight(), 0, 0,1, 1);
-//        postBatch.end();
-//        distortTarget.end();
-
-        postBatch.setShader(defaultShader);
-
-        return blurTrgtB.getColorBufferTexture();
     }
 
     public void transformModel(ModelGroup playerModel, UUID pid) {
@@ -332,8 +286,6 @@ public class GameRenderer {
         if (width == 0 || height == 0) return;
 
         if (fbo != null) fbo.dispose();
-        if (blurTrgtA != null) blurTrgtA.dispose();
-        if (blurTrgtB != null) blurTrgtB.dispose();
 
         FrameBufferBuilder frameBufferBuilder = new FrameBufferBuilder(width, height);
         frameBufferBuilder.addBasicColorTextureAttachment(Pixmap.Format.RGBA8888);
@@ -342,9 +294,15 @@ public class GameRenderer {
         frameBufferBuilder.addDepthRenderBuffer(GL30.GL_DEPTH_COMPONENT24);
         fbo = frameBufferBuilder.build();
 
-        float blurScale = 1f;
-        blurTrgtA = new FrameBuffer(Pixmap.Format.RGBA8888, (int) (width * blurScale), (int) (height * blurScale), false);
-        blurTrgtB = new FrameBuffer(Pixmap.Format.RGBA8888, (int) (width * blurScale), (int) (height * blurScale), false);
-        distortTarget = new FrameBuffer(Pixmap.Format.RGBA8888, width, height, false);
+        postprocBlur.buildFBO(width, height);
+    }
+
+    public static VfxManager setVfx(VfxManager vfm, ChainVfxEffect... effects) {
+        vfm.removeAllEffects();
+        for (ChainVfxEffect eff : effects) {
+            vfm.addEffect(eff);
+        }
+
+        return vfm;
     }
 }

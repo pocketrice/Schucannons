@@ -35,7 +35,11 @@ public class FuzzySearch {
             LevenshteinResults lr = (ignoreCase) ? ld.apply(query.toLowerCase(), res.toLowerCase()) : ld.apply(query, res);
             if (lr.getDistance() < normThreshold || lr.getInsertCount() < addThreshold && lr.getDeleteCount() + lr.getSubstituteCount() < 2) matches.add(Pair.of(res, lr));
         }
-        if (matches.isEmpty()) return new String[]{ null }; // prefer array w/ null rather than empty array (for querying array)
+        if (matches.isEmpty()) {
+            System.err.println("Fuzzy not found for " + query);
+            return new String[]{ null }; // prefer array w/ null rather than empty array (for querying array)
+        }
+
         return matches.stream().sorted(Comparator.comparingInt(p -> p.getValue().getDistance())).map(Pair::getKey).toArray(String[]::new);
     }
 

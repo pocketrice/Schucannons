@@ -20,11 +20,13 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
+import static io.github.pocketrice.server.GameSimulator.PROMPT_PHASE_SEC;
+
 public class DedicatedServer extends GameServer {
-    public static final int TICKS_PER_CHECK = 20;
+    static final int TPSCHECK_TICKS = 20;
+    Map<UUID, Set<Connection>> clientMap;
     Matchmaker mm;
     GameSimulator gsim;
-    Map<UUID, Set<Connection>> clientMap;
 
 
 
@@ -54,6 +56,8 @@ public class DedicatedServer extends GameServer {
         tps = 0.0;
         maxClients = 20;
         maxIBufferSize = maxOBufferSize = 10;
+
+        logInfo("Server " + this + " loaded.");
     }
 
     // This should be done (opt'l) prior to closing a server.
@@ -89,7 +93,10 @@ public class DedicatedServer extends GameServer {
                         switch (rq.getMsg()) {
                             case "GC_matches" -> {
                                 log("Matches requested from " + con);
-                                kryoServer.sendToTCP(con.getID(), new Response("GS_matches", mm.availableMatches.stream().map(Match::toString).collect(Collectors.joining("&"))));
+                                kryoServer.sendToTCP(con.getID(), new Response("GS_matches", mm.availableMatches.stream()
+                                        .sorted(Match::compareTo)
+                                        .map(Match::toString)
+                                        .collect(Collectors.joining("&"))));
                             }
 
                             case "GC_selMatch" -> {
@@ -116,10 +123,15 @@ public class DedicatedServer extends GameServer {
                                 m.updateState();
 
                                 if (m.getGameState() == GameState.READY) {
-                                    sendToMatch(m.getMatchId(), new Response("GS_start", new Object[]{ GameSimulator.PROMPT_PHASE_SEC }));
+                                    sendToMatch(m.getMatchId(), new Response("GS_prestart", null));
                                 } else {
                                     kryoServer.sendToTCP(con.getID(), new Response("GS_ackReady", null));
                                 }
+                            }
+
+                            case "GC_start" -> {
+                                logInfo("Pushing phase request!");
+                                sendToMatch(UUID.fromString((String) rq.getPayload()), new Response("GS_promptPhase", "" + PROMPT_PHASE_SEC));
                             }
 
                             case "GC_fillMatch" -> {
@@ -131,9 +143,8 @@ public class DedicatedServer extends GameServer {
                                 sendPlayerList(mid, con);
 
                                 if (m.getGameState() == GameState.READY) {
-                                    sendToMatch(m.getMatchId(), new Response("GS_start", GameSimulator.PROMPT_PHASE_SEC));
+                                    sendToMatch(m.getMatchId(), new Response("GS_prestart", null));
                                 }
-
                             }
 
                             case "GC_pp", "GC_ptp" -> // todo: correct?
@@ -162,7 +173,7 @@ public class DedicatedServer extends GameServer {
                 /*
                  * TPS calculator
                  */
-                if (tickCounter >= TICKS_PER_CHECK) {
+                if (tickCounter >= TPSCHECK_TICKS) {
                     tps = (double) tickCounter / ChronoUnit.SECONDS.between(tickCheckStart, Instant.now());
                     tickCounter = 0;
                     tickCheckStart = Instant.now();

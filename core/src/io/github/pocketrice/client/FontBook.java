@@ -26,7 +26,7 @@ public class Fontbook {
     public Fontbook(FreeTypeFontGenerator... fonts) {
         ftfs = new ArrayList<>(List.of(fonts));
         bmfCache = new TreeMap<>();
-        presetSettings = new Triplet<>("tinyislanders", 18, Color.BLACK);
+        presetSettings = new Triplet<>("tinyislanders", 18, Color.WHITE);
         presetBatch = null;
     }
 
@@ -71,7 +71,10 @@ public class Fontbook {
 
     public void draw(String font, int fontSize, CharSequence text, Vector2 loc) {
         BitmapFont bmf = getSizedBitmap(font, fontSize);
+        Color oldCol = bmf.getColor();
+        bmf.setColor(presetSettings.getValue2());
         bmf.draw(presetBatch, text, loc.x, loc.y);
+        bmf.setColor(oldCol);
     }
 
     public void draw(CharSequence text, Vector2 loc) {

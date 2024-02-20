@@ -20,7 +20,6 @@ import com.badlogic.gdx.math.Quaternion;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Stage;
-import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.JsonReader;
@@ -34,6 +33,9 @@ import net.mgsx.gltf.loaders.gltf.GLTFLoader;
 
 import java.util.Arrays;
 import java.util.List;
+
+import static io.github.pocketrice.client.ui.HUD.DEFAULT_SKIN;
+import static io.github.pocketrice.shared.AnsiCode.*;
 
 public class MenuScreen extends ScreenAdapter {
     static final Model PANO_MODEL = loadModel(Gdx.files.internal("models/schupano.obj"));
@@ -109,7 +111,7 @@ public class MenuScreen extends ScreenAdapter {
         } else {
             if (!isUILoaded) {
                 schubs = Arrays.stream(game.getGmgr().getMatchlist())
-                        .map(m -> new SchuButton(game.getGmgr(), audiobox, fontbook, m, new Skin(Gdx.files.internal("skins/onett/skin/terra-mother-ui.json"))))
+                        .map(m -> new SchuButton(game.getGmgr(), audiobox, fontbook, m, DEFAULT_SKIN))
                         .toList();
 
                 schubs.forEach(schub -> {
@@ -123,7 +125,7 @@ public class MenuScreen extends ScreenAdapter {
                     schub.getLabelMatchPeek().setColor(labelCol.r, labelCol.g, labelCol.b, 0f); // Set relative opacity to 0.
                 });
 
-                System.out.println("btns loaded stupid >:(");
+                System.out.println(ANSI_PURPLE + "btns loaded stupid >:(" + ANSI_RESET);
                 isUILoaded = true;
             }
         }

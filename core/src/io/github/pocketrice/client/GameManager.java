@@ -14,9 +14,10 @@ import java.util.UUID;
 
 // Does all the nitty-gritty client stuffs. Unpack server payloads, handle interp...
 public class GameManager {
-    public static final int MATCH_START_MAX_DELAY_SEC = 30;
+    public static final int MATCH_START_MAX_DELAY_SEC = 10;
 
-    static final Audiobox audiobox = Audiobox.of(List.of("duel_challenge.ogg", "notification_alert.ogg"), List.of());
+    static final Audiobox audiobox = Audiobox.of(List.of("dominate.ogg", "revenge.ogg", "aero-seatbelt.ogg", "notification_alert.ogg"), List.of());
+
     @Getter @Setter
     private GameClient client;
     @Setter
@@ -51,7 +52,7 @@ public class GameManager {
 
     public void receiveMatch(Object payload) {
         match = decompilePayload((ServerPayload) payload);
-        ((SchuClient) client).setMatchStarted(true);
+        ((SchuClient) client).setMatchJoined(true);
     }
 
     public void receiveMatchId(Object payload) {
@@ -122,10 +123,12 @@ public class GameManager {
                 client.log("Move phase started!");
             }
             case PROMPT -> {
+                audiobox.playSfx("dominate", 0.5f);
                 client.log("Prompt phase started!");
             }
 
             case SIM -> {
+                audiobox.playSfx("revenge", 0.5f);
                 client.log("Sim phase started!");
             }
 
@@ -163,6 +166,16 @@ public class GameManager {
         return match;
     }
 
+    public void processPrestart() {
+        if (match.getGameState() != Match.GameState.READY) client.logErr("Server dictated ready but game state out-of-sync.");
+        startInstant = Instant.now();
+        audiobox.playSfx("aero-seatbelt", 1f);
+    }
+
+    public void requestStart() {
+        client.kryoClient.sendTCP(new Request("GC_start", match.getMatchId().toString()));
+    }
+
     public Vector3[] retrievePlayerState(UUID pid) {
         Vector3[] pstate = new Vector3[2];
         Player player = match.getPlayer(pid);
@@ -173,10 +186,4 @@ public class GameManager {
         return pstate;
     }
 
-
-    public void processStart() {
-        if (match.getGameState() != Match.GameState.READY) client.logErr("Server dictated ready but game state out-of-sync.");
-        startInstant = Instant.now();
-        audiobox.playSfx("duel_challenge", 0.8f);
-    }
 }

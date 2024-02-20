@@ -2,7 +2,7 @@ package io.github.pocketrice.client.ui;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
@@ -11,15 +11,19 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import io.github.pocketrice.client.*;
 import io.github.pocketrice.client.Match.PhaseType;
 import io.github.pocketrice.shared.EasingFunction;
 import io.github.pocketrice.shared.Interlerper;
 import io.github.pocketrice.shared.LinkInterlerper;
+import lombok.Getter;
 import org.javatuples.Pair;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.function.Consumer;
 
 import static io.github.pocketrice.client.GameManager.MATCH_START_MAX_DELAY_SEC;
@@ -27,76 +31,194 @@ import static io.github.pocketrice.client.Match.truncate;
 
 // The HUD should contain dynamic things (options, popups, etc) but also persistent metrics. This is to be able to dynamically move things around.
 public class HUD {
-    static final Consumer<Object> SPRBATCH_FUNC = (obj) -> {
+    public static final Consumer<Object> SPRBATCH_FUNC = (obj) -> {
         SpriteBatch batch = ((Pair<?, SpriteBatch>) obj).getValue1();
         if (!batch.isDrawing()) batch.begin();
     };
+    public static final Skin DEFAULT_SKIN = new Skin(Gdx.files.internal("skins/onett/skin/terra-mother-ui.json"));
 
-    private final Fontbook fontbook;
+    public static final Fontbook fontbook = Fontbook.of("tinyislanders.ttf", "koholint.ttf", "dina.ttc", "tf2build.ttf", "tf2segundo.ttf", "benzin.ttf", "99occupy.ttf");
+    public static final Audiobox audiobox = Audiobox.of(List.of("hint.ogg", "slide_up.ogg", "slide_down.ogg"), List.of());
+
+
     private GameManager gmgr;
     private GameRenderer grdr;
     private SpriteBatch batch;
     private TextureAtlas mainSheet;
     private Sprite sprFlourish;
-    private Label labelTime, labelMatchInfo;
+    private Label labelTime, labelMatchInfo, labelTheta, labelMag;
+    private Table thetaMagPreview, thetaMagSelector;
+    @Getter
     private Stage stage;
-    private ChainInterlerper phaseStartChil; // chil = chain interlerper
+    private ChainInterlerper phaseStartChIl; // chil = chain interlerper
     private LinkInterlerper<Float, ? super Pair<Sprite, SpriteBatch>> phaseFlourishInterlerp;
     private LinkInterlerper<Float, ? super Pair<Label, SpriteBatch>> phaseTextInterlerp;
+    private LinkInterlerper<Integer, ? super Pair<Table[], SpriteBatch>> thetaMagPosInterlerp;
+
     private Interlerper<Float> matchInfoOpacityInterlerp;
     private Interlerper<Integer> matchInfoWaitAnimInterlerp;
 
 
     public HUD(GameManager gm, GameRenderer gr) {
         batch = new SpriteBatch();
-        fontbook = Fontbook.of("tinyislanders.ttf", "koholint.ttf", "dina.ttc", "tf2build.ttf", "tf2segundo.ttf", "benzin.ttf", "99occupy.ttf");
         fontbook.setBatch(batch);
         loadAssets();
 
-        phaseStartChil = new ChainInterlerper();
+        LabelStyle thetaMagPrevStyle = new LabelStyle();
+        thetaMagPrevStyle.font = fontbook.getSizedBitmap("tf2build", 35);
+        thetaMagPrevStyle.fontColor = Color.valueOf("#ffffff");
 
-        phaseFlourishInterlerp = new LinkInterlerper<>(0f, 1f)
+        LabelStyle thetaMagStyle = new LabelStyle();
+        thetaMagStyle.font = fontbook.getSizedBitmap("tf2build", 20);
+        thetaMagStyle.fontColor = Color.valueOf("#afafaf");
+
+        Label thetaPreview = new Label("0 = ", thetaMagPrevStyle);
+        Label magPreview = new Label("∥v∥ = ", thetaMagPrevStyle);
+        Label thetaSel = new Label("0", thetaMagStyle);
+        Label magSel = new Label("∥v∥", thetaMagStyle);
+        labelTheta = new Label("0°", thetaMagPrevStyle);
+        labelMag = new Label("0.0 m/s", thetaMagPrevStyle);
+
+        BackgroundColor tmBg = BackgroundColor.generateSolidBg(Color.valueOf("#d3d2e97f"));
+        thetaMagPreview = new Table().left().pad(20f);
+        thetaMagPreview.setBackground(tmBg);
+        thetaMagPreview.setY(400);
+        thetaMagPreview.add(thetaPreview).pad(10f, 0f, 10f, 0f);
+        thetaMagPreview.add(labelTheta).left();
+        thetaMagPreview.row();
+        thetaMagPreview.add(magPreview).pad(10f, 0f, 10f, 0f);
+        thetaMagPreview.add(labelMag).left();
+        thetaMagPreview.row();
+
+        thetaMagSelector = new Table().left().pad(10f);
+        thetaMagSelector.setBackground(tmBg);
+        thetaMagSelector.setY(200);
+        thetaMagSelector.add(thetaSel).pad(10f, 10f, 10f, 10f);
+        thetaMagSelector.add(new NumberButton(audiobox, fontbook, true, true, "**°", 90f, 0f, 5f, labelTheta, DEFAULT_SKIN)).pad(10f);
+        thetaMagSelector.add(new NumberButton(audiobox, fontbook, false, true, "**°", 90f, 0f, 5f, labelTheta, DEFAULT_SKIN)).pad(10f);
+        thetaMagSelector.row();
+        thetaMagSelector.add(magSel).pad(10f, 15f, 10f, 15f);
+        thetaMagSelector.add(new NumberButton(audiobox, fontbook, true, true, " m/s", 90f, 0f, 3f, labelMag, DEFAULT_SKIN)).pad(10f);
+        thetaMagSelector.add(new NumberButton(audiobox, fontbook, false, true, " m/s", 90f, 0f, 3f, labelMag, DEFAULT_SKIN)).pad(10f);
+        thetaMagSelector.row();
+
+        stage = new Stage();
+        stage.addActor(thetaMagSelector);
+
+        phaseStartChIl = new ChainInterlerper();
+
+        phaseFlourishInterlerp = new LinkInterlerper<>(0f, 1f, EasingFunction.EASE_OUT_CUBIC, 0.012)
                 .linkObj(Pair.with(sprFlourish, batch))
                 .linkFunc((t, obj) -> {
                     Pair<Sprite, SpriteBatch> batchPair = (Pair) obj;
                     Sprite spr = batchPair.getValue0();
+                    SpriteBatch batch = batchPair.getValue1();
+                    Texture sprTexture = spr.getTexture();
 
                     float lerpVal = phaseFlourishInterlerp.interlerp(t, EasingFunction.LINEAR);
-                    Gdx.gl.glScissor(0,0, (int) (spr.getWidth() * lerpVal), (int) (spr.getHeight() * lerpVal));
-                })
-                .preFunc((obj) -> {
-                    Gdx.gl.glEnable(GL20.GL_SCISSOR_TEST);
-                    SPRBATCH_FUNC.accept(obj);
-                })
-                .postFunc((obj) -> {
-                    batch.end();
-                    Gdx.gl.glDisable(GL20.GL_SCISSOR_TEST);
-                    SPRBATCH_FUNC.accept(obj);
-                });
+                    batch.draw(
+                            sprTexture,
+                            spr.getX(),
+                            spr.getY(),
+                            sprTexture.getWidth(),
+                            sprTexture.getHeight(),
+                            sprTexture.getWidth() * lerpVal,
+                            sprTexture.getHeight(),
+                            spr.getScaleX(),
+                            spr.getScaleY(),
+                            spr.getRotation(),
+                            spr.getRegionX(),
+                            spr.getRegionY(),
+                            (int) (spr.getRegionWidth() * lerpVal),
+                            spr.getRegionHeight(),
+                            false,
+                            false);
 
-
-        phaseTextInterlerp = new LinkInterlerper<>(0f, 1f)
-                .linkObj(Pair.with(labelTime, batch))
-                .linkFunc((t, obj) -> {
-                    Pair<Label, SpriteBatch> batchPair = (Pair) obj;
-                    Label labelTime = batchPair.getValue0();
-
-                    float lerpVal = phaseTextInterlerp.interlerp(t, EasingFunction.LINEAR);
-                    labelTime.setColor(labelTime.getColor().r, labelTime.getColor().g, labelTime.getColor().b, lerpVal);
-                    labelTime.setFontScale(1 + (1 - lerpVal));
-                    labelTime.setRotation(10 * (1 - lerpVal));
+                  // Gdx.gl.glScissor(0,0, (int) (spr.getWidth() * lerpVal), (int) (spr.getHeight() * lerpVal));
                 })
                 .preFunc(SPRBATCH_FUNC)
                 .postFunc(SPRBATCH_FUNC);
 
 
-        matchInfoOpacityInterlerp = new Interlerper<>(1f, 0f, EasingFunction.EASE_IN_OUT_CUBIC, 0.0025);
+        phaseTextInterlerp = new LinkInterlerper<>(0f, 1f, EasingFunction.EASE_IN_OUT_SINE, 0.01)
+                .linkObj(Pair.with(labelTime, batch))
+                .linkFunc((t, obj) -> {
+                    Pair<Label, SpriteBatch> batchPair = (Pair) obj;
+                    Label labelTime = batchPair.getValue0();
+                    SpriteBatch batch = batchPair.getValue1();
 
+                    float lerpVal = phaseTextInterlerp.interlerp(t, EasingFunction.LINEAR);
+                    labelTime.setColor(labelTime.getColor().r, labelTime.getColor().g, labelTime.getColor().b, lerpVal);
+                    labelTime.setFontScale(1 + (1 - lerpVal));
+                    labelTime.setRotation(30 * (1 - lerpVal));
+
+                    labelTime.draw(batch, 1f);
+                })
+                .preFunc(SPRBATCH_FUNC)
+                .postFunc(SPRBATCH_FUNC);
+
+        thetaMagPosInterlerp = new LinkInterlerper<>(800, 700, EasingFunction.EASE_OUT_BACK, 0.01)
+                .linkObj(Pair.with(new Table[]{thetaMagPreview, thetaMagSelector}, batch))
+                .linkFunc((t, obj) -> {
+                    Pair<Table[], SpriteBatch> batchPair = (Pair) obj;
+                    Table tmPreview = batchPair.getValue0()[0];
+                    Table tmSel = batchPair.getValue0()[1];
+                    SpriteBatch batch = batchPair.getValue1();
+
+                    int lerpVal = thetaMagPosInterlerp.interlerp(t, EasingFunction.LINEAR);
+                    tmPreview.setX(lerpVal);
+                    tmSel.setX(lerpVal);
+
+                    tmPreview.draw(batch, 1f);
+                    tmSel.draw(batch, 1f);
+                })
+                .preFunc(SPRBATCH_FUNC)
+                .postFunc(SPRBATCH_FUNC);
+
+
+
+
+
+        phaseStartChIl.addSublerp(1f, new ChainKeyframe(phaseFlourishInterlerp, (obj) -> {
+            Pair<Sprite, SpriteBatch> batchPair = (Pair) obj;
+            Sprite spr = batchPair.getValue0();
+            SpriteBatch batch = batchPair.getValue1();
+            Texture sprTexture = spr.getTexture();
+
+            batch.draw(
+                    sprTexture,
+                    spr.getX(),
+                    spr.getY(),
+                    sprTexture.getWidth(),
+                    sprTexture.getHeight(),
+                    sprTexture.getWidth(),
+                    sprTexture.getHeight(),
+                    spr.getScaleX(),
+                    spr.getScaleY(),
+                    spr.getRotation(),
+                    spr.getRegionX(),
+                    spr.getRegionY(),
+                    spr.getRegionWidth(),
+                    spr.getRegionHeight(),
+                    false,
+                    false);
+        }));
+
+        phaseStartChIl.addSublerp(2f, new ChainKeyframe(phaseTextInterlerp, (obj) -> {
+            Pair<Label, SpriteBatch> pair = ChainKeyframe.extractPair(obj);
+            pair.getValue0().draw(pair.getValue1(), 1f);
+        }));
+
+        phaseStartChIl.addSublerp(2f, new ChainKeyframe(thetaMagPosInterlerp, (obj) -> {
+            Pair<Table[], SpriteBatch> pair = ChainKeyframe.extractPair(obj);
+            for (Table t : pair.getValue0()) {
+                t.draw(pair.getValue1(), 1f);
+            }
+        }));
+
+        matchInfoOpacityInterlerp = new Interlerper<>(1f, 0f, EasingFunction.EASE_IN_OUT_CUBIC, 0.0025);
         matchInfoWaitAnimInterlerp = new Interlerper<>(0, 4, EasingFunction.LINEAR, 0.005);
         matchInfoWaitAnimInterlerp.setLooping(true);
-
-        phaseStartChil.addSublerp(0f, phaseFlourishInterlerp);
-        phaseStartChil.addSublerp(3f, phaseTextInterlerp);
 
         gmgr = gm;
         grdr = gr;
@@ -108,42 +230,20 @@ public class HUD {
         PhaseType phase = gmgr.getPhaseType();
         Vector3 projVec = (matchState.getCurrentPlayer() == null) ? Vector3.Zero : matchState.getCurrentPlayer().getProjVector();
         batch.begin();
-        fontbook.formatDraw("benzin", 20, Color.valueOf("#b8b1f22F"), matchState.getIdentifier(), new Vector2(700, 800));
+        fontbook.formatDraw("benzin", 24, Color.valueOf("#b8b1f22F"), matchState.getIdentifier(), new Vector2(700, 780));
 
         fontbook.font("tinyislanders").fontSize(30).fontColor(Color.valueOf("#d0cee08F"));
         fontbook.formatDraw("X: " + projVec.x, new Vector2(30, 110));
         fontbook.formatDraw("Y: " + projVec.y, new Vector2(30, 85));
         fontbook.formatDraw("Z: " + projVec.z, new Vector2(30, 60));
 
-        if (gmgr.getGame().isDebug()) {
-            fontbook.font("koholint").fontSize(20).fontColor(Color.valueOf("#DFE6D17F"));
-            Vector3 camPos = grdr.getGameCam().position;
-            fontbook.formatDraw("loc: (" + truncate(camPos.x,3) + ", " + truncate(camPos.y,3) + ", " + truncate(camPos.z,3) + ")", new Vector2(30, 800));
-            fontbook.formatDraw("fps: " + Gdx.graphics.getFramesPerSecond(), new Vector2(30, 780));
-            fontbook.formatDraw("tps: " + gmgr.getClient().getServerTps(), new Vector2(30, 760));
-            fontbook.formatDraw("server: " + gmgr.getClient().getServerName(), new Vector2(30, 740));
-            fontbook.formatDraw("client: " + gmgr.getClient().getClientName(), new Vector2(30, 720));
-            fontbook.formatDraw("ping: " + gmgr.getClient().getPing(), new Vector2(30, 700));
-
-            if ((double) Runtime.getRuntime().freeMemory() / Runtime.getRuntime().totalMemory() < 0.05) {
-                System.err.println("<!> Memory warning: " + Runtime.getRuntime().freeMemory() / 1E6f + "mb remaining!");
-                fontbook.fontColor(Color.valueOf("#B3666C7F"));
-            } else
-                fontbook.fontColor(Color.valueOf("#DFE6D17F"));
-
-            fontbook.formatDraw("mem: " + truncate((Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1E6f, 2) + "mb / " + truncate(Runtime.getRuntime().totalMemory() / 1E6f, 2) + "mb", new Vector2(30, 680));
-        }
-
         switch (phase) {
             case MOVE, PROMPT, SIM -> {
                 float deltaSec = ChronoUnit.MILLIS.between(gmgr.getPhaseStartInstant(), Instant.now()) / 1000f;
-                phaseStartChil.apply(deltaSec, 0.02);
+                phaseStartChIl.apply(deltaSec, 0.02);
 
                 int remainingSec = gmgr.getPhaseTime() - (int) deltaSec;
                 labelTime.setText(remainingSec / 60 + ":" + ((remainingSec % 60 < 10) ? "0" : "") + remainingSec % 60);
-
-                sprFlourish.draw(batch);
-                labelTime.draw(batch, 1f);
             }
 
             case ENDED -> {
@@ -167,17 +267,38 @@ public class HUD {
             labelMatchInfo.draw(batch, 1f);
         }
 
+        if (gmgr.getGame().isDebug()) {
+            fontbook.font("koholint").fontSize(20).fontColor(Color.valueOf("#DFE6D17F"));
+            Vector3 camPos = grdr.getGameCam().position;
+            fontbook.formatDraw("loc: (" + truncate(camPos.x,3) + ", " + truncate(camPos.y,3) + ", " + truncate(camPos.z,3) + ")", new Vector2(30, 800));
+            fontbook.formatDraw("fps: " + Gdx.graphics.getFramesPerSecond(), new Vector2(30, 780));
+            fontbook.formatDraw("tps: " + gmgr.getClient().getServerTps(), new Vector2(30, 760));
+            fontbook.formatDraw("server: " + gmgr.getClient().getServerName(), new Vector2(30, 740));
+            fontbook.formatDraw("client: " + gmgr.getClient().getClientName(), new Vector2(30, 720));
+            fontbook.formatDraw("ping: " + gmgr.getClient().getPing(), new Vector2(30, 700));
+
+            if ((double) Runtime.getRuntime().freeMemory() / Runtime.getRuntime().totalMemory() < 0.05) {
+                System.err.println("<!> Memory warning: " + Runtime.getRuntime().freeMemory() / 1E6f + "mb remaining!");
+                fontbook.fontColor(Color.valueOf("#B3666C7F"));
+            } else
+                fontbook.fontColor(Color.valueOf("#DFE6D17F"));
+
+            fontbook.formatDraw("mem: " + truncate((Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1E6f, 2) + "mb / " + truncate(Runtime.getRuntime().totalMemory() / 1E6f, 2) + "mb", new Vector2(30, 680));
+        }
+
         batch.end();
+        stage.act();
     }
 
     public void loadAssets() {
         mainSheet = new TextureAtlas(Gdx.files.internal("textures/main.atlas"));
         sprFlourish = mainSheet.createSprite("flourish");
-        sprFlourish.setRotation(15f);
-        sprFlourish.setPosition(30, 740);
+        sprFlourish.setRotation(11f);
+        sprFlourish.setPosition(-770, 550); // oi mate, bloody magic nums evrywhere?? you are hereby not a programmer anymore >:((
+        sprFlourish.setScale(0.3f);
 
         LabelStyle labelStyleTime = new LabelStyle();
-        labelStyleTime.font = fontbook.getSizedBitmap("99occupy", 30, Color.valueOf("#D6D7E6"));
+        labelStyleTime.font = fontbook.getSizedBitmap("99occupy", 35, Color.valueOf("#D6D7E6D0"));
         labelTime = new Label("-:--", labelStyleTime);
         labelTime.setPosition(30, 750);
 

@@ -12,10 +12,11 @@ import static io.github.pocketrice.shared.AnsiCode.ANSI_BLUE;
 import static io.github.pocketrice.shared.AnsiCode.ANSI_RESET;
 
 public class Matchmaker {
+    static final int AVAILABLE_MATCHES = 2, START_MATCHES = 6, MAX_MATCHES = 10;
     List<Match> matches;
     Queue<Match> availableMatches;
 
-    public static final int AVAILABLE_MATCHES = 2, START_MATCHES = 6, MAX_MATCHES = 10;
+
 
     public Matchmaker() {
        Match[] startMatches = new Match[START_MATCHES];

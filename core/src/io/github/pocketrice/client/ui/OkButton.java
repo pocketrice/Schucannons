@@ -17,32 +17,33 @@ import io.github.pocketrice.shared.LinkInterlerper;
 import io.github.pocketrice.shared.Request;
 import lombok.Getter;
 
-public class ReadyButton extends TextButton {
+public class OkButton extends TextButton {
     Audiobox audiobox;
     Fontbook fontbook;
     @Getter
     TextButtonStyle tbs;
     @Getter
-    LinkInterlerper<Integer, ? super ReadyButton> interlerpFontSize; // Java PECS acronym - consumers should ? super T!
+    LinkInterlerper<Integer, ? super OkButton> interlerpFontSize; // Java PECS acronym - consumers should ? super T!
     @Getter
-    LinkInterlerper<Color, ? super ReadyButton> interlerpColor;
+    LinkInterlerper<Color, ? super OkButton> interlerpColor;
     GameManager gman;
     GameScreen gscreen;
 
 
 
-    public ReadyButton(GameManager gm, GameScreen gs, Audiobox ab, Fontbook fb, Skin skin) {
-        super("OK", skin);
+    public OkButton(GameManager gm, GameScreen gs, Audiobox ab, Fontbook fb, Skin skin) {
+        super("TO WAR!", skin);
         this.setHeight(100);
         audiobox = ab;
         fontbook = fb;
         tbs = new TextButtonStyle();
-        tbs.font = fontbook.getSizedBitmap("tf2build", 40);
+        tbs.font = fontbook.getSizedBitmap("tf2build", 60);
+        this.setStyle(tbs);
 
         interlerpFontSize = new LinkInterlerper<>(45, 50, EasingFunction.EASE_IN_OUT_SINE, 0.04)
                 .linkObj(this)
                 .linkFunc((t, obj) -> {
-                    ReadyButton rb = (ReadyButton) obj; // vv The easing is ALWAYS linear here, because step() already applies an easing.
+                    OkButton rb = (OkButton) obj; // vv The easing is ALWAYS linear here, because step() already applies an easing.
                     int fontSize = interlerpFontSize.interlerp(t, EasingFunction.LINEAR); // Rmeember that interlerp returns double b/c covers most numbertypes.
                     rb.tbs.font = fontbook.getSizedBitmap("tf2build", fontSize);
                     rb.setStyle(tbs);
@@ -51,7 +52,7 @@ public class ReadyButton extends TextButton {
         interlerpColor = new LinkInterlerper<>(Color.valueOf("#afafdd"), Color.valueOf("#e2e5f3"), EasingFunction.EASE_IN_OUT_SINE, 0.04)
                 .linkObj(this)
                 .linkFunc((t, obj) -> {
-                    ReadyButton rb = (ReadyButton) obj;
+                    OkButton rb = (OkButton) obj;
                     rb.tbs.fontColor = interlerpColor.interlerp(t, EasingFunction.LINEAR);
                     rb.setStyle(tbs);
                 });

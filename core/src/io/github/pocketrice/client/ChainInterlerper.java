@@ -1,29 +1,30 @@
 package io.github.pocketrice.client;
 
-import io.github.pocketrice.shared.LinkInterlerper;
 import org.javatuples.Pair;
 
 import java.util.*;
 
 public class ChainInterlerper {
-    Map<Float, Set<LinkInterlerper>> sublerps;
+    Map<Float, Set<ChainKeyframe>> sublerps;
 
     public ChainInterlerper() {
         sublerps = new TreeMap<>();
     }
-    public ChainInterlerper(Pair<Float, LinkInterlerper>... keyframes) {
+    public ChainInterlerper(Pair<Float, ChainKeyframe>... keyframes) {
         sublerps = new TreeMap<>();
-        for (Pair<Float, LinkInterlerper> kf : keyframes) {
+        for (Pair<Float, ChainKeyframe> kf : keyframes) {
             addSublerp(kf.getValue0(), kf.getValue1());
         }
     }
 
-    public void addSublerp(float t, LinkInterlerper interlerp) {
+    public void addSublerp(float t, ChainKeyframe ckf) {
         sublerps.putIfAbsent(t, new HashSet<>());
-        sublerps.get(t).add(interlerp);
+        sublerps.get(t).add(ckf);
     }
 
-    public Set<LinkInterlerper> getSublerp(float t) {
+
+
+    public Set<ChainKeyframe> getSublerp(float t) {
         return sublerps.get(t);
     }
 
@@ -31,7 +32,7 @@ public class ChainInterlerper {
          List<Float> times = sublerps.keySet().stream().toList();
          for (float time : times) {
              if (deltaT >= time) {
-                 sublerps.get(time).forEach(LinkInterlerper::step);
+                 sublerps.get(time).forEach(ChainKeyframe::step);
              }
          }
     }

@@ -1,4 +1,4 @@
-package io.github.pocketrice.client.effects;
+package io.github.pocketrice.client.render.effects;
 
 import com.badlogic.gdx.Gdx;
 import com.crashinvaders.vfx.VfxRenderContext;
