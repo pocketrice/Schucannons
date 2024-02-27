@@ -67,13 +67,18 @@ project(":core") {
         api 'com.github.crykn:kryonet:2.22.8'
         api 'com.esotericsoftware:kryo:4.0.0'
         api "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
+        implementation 'com.github.Hangman:TuningFork:4.2.1'
+        implementation 'com.github.crykn:libgdx-screenmanager:v0.7.0'
+        implementation "com.github.tommyettinger:textratypist:0.10.0"
         implementation 'org.javatuples:javatuples:1.2'
         implementation 'de.javakaffee:kryo-serializers:0.45'
         implementation 'org.apache.commons:commons-text:1.11.0'
         implementation 'com.github.javafaker:javafaker:1.0.2'
         implementation 'com.crashinvaders.vfx:gdx-vfx-core:0.5.4'
         implementation 'com.crashinvaders.vfx:gdx-vfx-effects:0.5.4'
+        implementation("com.maltaisn:msdf-gdx:0.2.1")
         compileOnly 'org.projectlombok:lombok:1.18.30'
+        compileOnly "com.strongjoshua:libgdx-inGameConsole:1.0.0"
         annotationProcessor 'org.projectlombok:lombok:1.18.30'
     }
 }

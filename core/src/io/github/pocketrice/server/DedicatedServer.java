@@ -131,7 +131,7 @@ public class DedicatedServer extends GameServer {
 
                             case "GC_start" -> {
                                 logInfo("Pushing phase request!");
-                                sendToMatch(UUID.fromString((String) rq.getPayload()), new Response("GS_promptPhase", "" + PROMPT_PHASE_SEC));
+                                sendToMatch(UUID.fromString((String) rq.getPayload()), new Response("GS_movePhase", "" + PROMPT_PHASE_SEC));
                             }
 
                             case "GC_fillMatch" -> {

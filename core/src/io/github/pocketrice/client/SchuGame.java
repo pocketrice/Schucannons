@@ -9,10 +9,14 @@ import io.github.pocketrice.server.GameServer;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
+
 // TODO: AWFUL memory leaks abound, pls fix
 
 public class SchuGame extends Game {
 	public static final int VIEWPORT_WIDTH = 960, VIEWPORT_HEIGHT = 880;
+	public static final Fontbook fontbook = Fontbook.of("koholint.ttf", "dina.ttc", "tf2build.ttf", "tf2segundo.ttf", "delfino.ttf", "kyomadoka.ttf", "tinyislanders.ttf", "benzin.ttf", "99occupy.ttf");
+	public static final Audiobox audiobox = Audiobox.of(List.of("hint.ogg", "slide_up.ogg", "slide_down.ogg", "notification_alert.ogg", "hitsound.ogg", "duel_challenge.ogg", "buttonclick.ogg", "buttonclickrelease.ogg", "buttonrollover.ogg", "hitsound.ogg", "vote_started.ogg", "dominate.ogg", "revenge.ogg", "aero-seatbelt.ogg"), List.of());
 
 	private Viewport vp;
 	private SchuClient sclient;

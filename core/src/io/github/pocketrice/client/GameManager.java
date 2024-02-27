@@ -16,8 +16,6 @@ import java.util.UUID;
 public class GameManager {
     public static final int MATCH_START_MAX_DELAY_SEC = 10;
 
-    static final Audiobox audiobox = Audiobox.of(List.of("dominate.ogg", "revenge.ogg", "aero-seatbelt.ogg", "notification_alert.ogg"), List.of());
-
     @Getter @Setter
     private GameClient client;
     @Setter
@@ -32,9 +30,9 @@ public class GameManager {
 
 
     @Getter @Setter
-    private boolean isClientConnected;
+    private boolean isClientConnected, isRunningPhase;
     @Getter @Setter
-    private int phaseTime;
+    private int phaseDuration, phaseDelay;
     @Getter @Setter
     private Instant phaseStartInstant, joinInstant, startInstant;
     @Getter
@@ -87,7 +85,7 @@ public class GameManager {
                     match.addPlayers(client.getSelf());
                 } else {
                     if (!hasPlayedSfx) {
-                        audiobox.playSfx("notification_alert", 0.8f);
+                        audiobox.playSfx("notification_alert", 0.4f);
                         hasPlayedSfx = true;
                     }
 
@@ -113,7 +111,7 @@ public class GameManager {
 
     public void receivePhaseSignal(Object payload, PhaseType phase) {
         String[] phaseInfo = ((String) payload).split("\\|"); // [ phaseTime, movePhaseMaxDist (opt) ]
-        phaseTime = Integer.parseInt(phaseInfo[0]);
+        phaseDuration = Integer.parseInt(phaseInfo[0]);
         phaseType = phase;
         phaseStartInstant = Instant.now();
 
@@ -169,7 +167,7 @@ public class GameManager {
     public void processPrestart() {
         if (match.getGameState() != Match.GameState.READY) client.logErr("Server dictated ready but game state out-of-sync.");
         startInstant = Instant.now();
-        audiobox.playSfx("aero-seatbelt", 1f);
+        audiobox.playSfx("aero-seatbelt", 3f);
     }
 
     public void requestStart() {

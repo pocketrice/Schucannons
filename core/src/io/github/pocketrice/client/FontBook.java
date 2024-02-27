@@ -16,6 +16,8 @@ import java.util.Map;
 import java.util.TreeMap;
 
 // Manages fonts!
+
+// TODO implement Textural's Font (SDMF)
 public class Fontbook {
     List<FreeTypeFontGenerator> ftfs;
     Map<Integer, List<BitmapFont>> bmfCache;
@@ -111,7 +113,7 @@ public class Fontbook {
     }
 
     // Terminating branch of builder
-    public void setBatch(SpriteBatch batch) {
+    public void bind(SpriteBatch batch) {
         presetBatch = batch;
     }
 

@@ -2,7 +2,6 @@ package io.github.pocketrice.client.screens;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.ScreenAdapter;
-import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
@@ -14,35 +13,29 @@ import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
-import com.badlogic.gdx.graphics.g3d.loader.G3dModelLoader;
-import com.badlogic.gdx.graphics.g3d.loader.ObjLoader;
 import com.badlogic.gdx.math.Quaternion;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton.TextButtonStyle;
 import com.badlogic.gdx.utils.Align;
-import com.badlogic.gdx.utils.JsonReader;
-import io.github.pocketrice.client.Audiobox;
-import io.github.pocketrice.client.Fontbook;
 import io.github.pocketrice.client.SchuGame;
 import io.github.pocketrice.client.ui.SchuButton;
+import io.github.pocketrice.client.ui.SchuMenuButton;
 import io.github.pocketrice.shared.LinkInterlerper;
-import net.mgsx.gltf.loaders.glb.GLBLoader;
-import net.mgsx.gltf.loaders.gltf.GLTFLoader;
 
 import java.util.Arrays;
 import java.util.List;
 
-import static io.github.pocketrice.client.ui.HUD.DEFAULT_SKIN;
+import static io.github.pocketrice.client.GameRenderer.loadModel;
+import static io.github.pocketrice.client.SchuGame.audiobox;
+import static io.github.pocketrice.client.SchuGame.fontbook;
 import static io.github.pocketrice.shared.AnsiCode.*;
 
 public class MenuScreen extends ScreenAdapter {
     static final Model PANO_MODEL = loadModel(Gdx.files.internal("models/schupano.obj"));
-
-    final Fontbook fontbook = Fontbook.of("tinyislanders.ttf", "koholint.ttf");
-    final Audiobox audiobox = Audiobox.of(List.of("buttonclick.ogg", "buttonclickrelease.ogg", "buttonrollover.ogg", "hint.ogg", "notification_alert.ogg"), List.of());
-
     SpriteBatch sprBatch;
     ModelBatch modelBatch;
     OrthographicCamera ocam;
@@ -55,7 +48,7 @@ public class MenuScreen extends ScreenAdapter {
     LinkInterlerper<Float, Object[]> interlerpTitleFade;
     LinkInterlerper<Float, Object[]> interlerpMenuFade;
 
-    List<SchuButton> schubs;
+    List<SchuMenuButton> schubs;
     Table matchlistBtns;
     boolean isUILoaded; // TEMP
 
@@ -76,7 +69,7 @@ public class MenuScreen extends ScreenAdapter {
         env.add(new DirectionalLight().set(0.6f, 0.3f, 1.1f, 1f, -0.5f, 0f));
         env.add(new DirectionalLight().set(0.8f, 0.3f, 0.4f, 0f, 0.5f, 0f));
 
-        fontbook.setBatch(sprBatch);
+        fontbook.bind(sprBatch);
         game = sg;
         stage = new Stage();
 
@@ -111,13 +104,10 @@ public class MenuScreen extends ScreenAdapter {
         } else {
             if (!isUILoaded) {
                 schubs = Arrays.stream(game.getGmgr().getMatchlist())
-                        .map(m -> new SchuButton(game.getGmgr(), audiobox, fontbook, m, DEFAULT_SKIN))
+                        .map(m -> new SchuMenuButton(game.getGmgr(), m, SchuButton.generateStyle("koholint", Color.valueOf("#afafdd"), 21)))
                         .toList();
 
                 schubs.forEach(schub -> {
-                    schub.getTbs().font = fontbook.getSizedBitmap("koholint", 21);
-                    schub.getTbs().fontColor = Color.valueOf("#afafdd");
-                    schub.setStyle(schub.getTbs());
                     matchlistBtns.add(schub).align(Align.left).padBottom(8f).padRight(20f);
                     matchlistBtns.add(schub.getLabelMatchPeek()).align(Align.left).padBottom(8f);
                     matchlistBtns.row();
@@ -151,24 +141,5 @@ public class MenuScreen extends ScreenAdapter {
     @Override
     public void hide(){
         Gdx.input.setInputProcessor(null);
-    }
-
-    public static Model loadModel(FileHandle filehandle) {
-        Model res;
-
-        String[] handleStrs = filehandle.toString().split("\\.");
-        switch (handleStrs[handleStrs.length - 1].toLowerCase()) {
-            case "gltf" -> res = new GLTFLoader().load(filehandle).scene.model;
-
-            case "glb" -> res = new GLBLoader().load(filehandle).scene.model;
-
-            case "obj" -> res = new ObjLoader().loadModel(filehandle);
-
-            case "g3db" -> res = new G3dModelLoader(new JsonReader()).loadModel(filehandle);
-
-            default -> res = null;
-        }
-
-        return res;
     }
 }

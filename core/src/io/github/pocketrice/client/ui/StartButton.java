@@ -6,7 +6,6 @@ import com.badlogic.gdx.graphics.Cursor;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
-import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import io.github.pocketrice.client.Audiobox;
 import io.github.pocketrice.client.Fontbook;
@@ -17,21 +16,13 @@ import io.github.pocketrice.shared.LinkInterlerper;
 import io.github.pocketrice.shared.Request;
 import lombok.Getter;
 
-public class OkButton extends TextButton {
-    Audiobox audiobox;
-    Fontbook fontbook;
-    @Getter
-    TextButtonStyle tbs;
-    @Getter
-    LinkInterlerper<Integer, ? super OkButton> interlerpFontSize; // Java PECS acronym - consumers should ? super T!
-    @Getter
-    LinkInterlerper<Color, ? super OkButton> interlerpColor;
+public class StartButton extends SchuButton {
     GameManager gman;
     GameScreen gscreen;
 
 
 
-    public OkButton(GameManager gm, GameScreen gs, Audiobox ab, Fontbook fb, Skin skin) {
+    public StartButton(GameManager gm, GameScreen gs, Audiobox ab, Fontbook fb, Skin skin) {
         super("TO WAR!", skin);
         this.setHeight(100);
         audiobox = ab;
@@ -40,22 +31,7 @@ public class OkButton extends TextButton {
         tbs.font = fontbook.getSizedBitmap("tf2build", 60);
         this.setStyle(tbs);
 
-        interlerpFontSize = new LinkInterlerper<>(45, 50, EasingFunction.EASE_IN_OUT_SINE, 0.04)
-                .linkObj(this)
-                .linkFunc((t, obj) -> {
-                    OkButton rb = (OkButton) obj; // vv The easing is ALWAYS linear here, because step() already applies an easing.
-                    int fontSize = interlerpFontSize.interlerp(t, EasingFunction.LINEAR); // Rmeember that interlerp returns double b/c covers most numbertypes.
-                    rb.tbs.font = fontbook.getSizedBitmap("tf2build", fontSize);
-                    rb.setStyle(tbs);
-                });
 
-        interlerpColor = new LinkInterlerper<>(Color.valueOf("#afafdd"), Color.valueOf("#e2e5f3"), EasingFunction.EASE_IN_OUT_SINE, 0.04)
-                .linkObj(this)
-                .linkFunc((t, obj) -> {
-                    OkButton rb = (OkButton) obj;
-                    rb.tbs.fontColor = interlerpColor.interlerp(t, EasingFunction.LINEAR);
-                    rb.setStyle(tbs);
-                });
 
         gman = gm;
         gscreen = gs;

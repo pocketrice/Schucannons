@@ -9,15 +9,15 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
-import io.github.pocketrice.client.Fontbook;
 import io.github.pocketrice.client.GameManager;
 import io.github.pocketrice.client.SchuGame;
+
+import static io.github.pocketrice.client.SchuGame.fontbook;
 
 public class LoadScreen extends ScreenAdapter {
     private static final int UPDATE_FRAME_COUNT = 60;
     private static final int LOAD_DELAY_FRAME_COUNT = 400;
 
-    private final Fontbook fontbook;
     private SpriteBatch batch;
     private OrthographicCamera camera;
     private SchuGame game;
@@ -39,8 +39,7 @@ public class LoadScreen extends ScreenAdapter {
         loadMsg = "Loading";
         updateDeltaFrames = 0;
 
-        fontbook = Fontbook.of("tf2build.ttf", "tf2segundo.ttf");
-        fontbook.setBatch(batch);
+        fontbook.bind(batch);
     }
 
     @Override

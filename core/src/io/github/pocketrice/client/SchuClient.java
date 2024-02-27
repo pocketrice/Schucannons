@@ -115,6 +115,11 @@ public class SchuClient extends GameClient {
                                 gmgr.processPrestart();
                             }
 
+                            case "GS_movePhase" -> {
+                                log("Move phase starting...");
+                                gmgr.receivePhaseSignal(rp.getPayload(), PhaseType.MOVE);
+                            }
+
                             case "GS_promptPhase" -> {
                                 log("Prompt phase starting...");
                                 gmgr.receivePhaseSignal(rp.getPayload(), PhaseType.PROMPT);
@@ -161,17 +166,26 @@ public class SchuClient extends GameClient {
                     sendPayload();
                 }
 
-
-                // Request to server to fill match w/ a bot
-                if (gmgr.getJoinInstant() != null && ChronoUnit.SECONDS.between(gmgr.getJoinInstant(), Instant.now()) > AWAIT_MAX_SEC) {
-                    log(AWAIT_MAX_SEC + " sec elapsed without other player. Requesting bot player...");
-                    gmgr.setJoinInstant(null);
-                    kryoClient.sendTCP(new Request("GC_fillMatch", gmgr.getMatchState().getMatchId().toString()));
+                if (gmgr.getJoinInstant() != null) {
+                    // Request to server to fill match w/ a bot
+                    if (timeSurpassed(gmgr.getJoinInstant(), AWAIT_MAX_SEC)) {
+                        log(AWAIT_MAX_SEC + " sec elapsed without other player. Requesting bot player...");
+                        gmgr.setJoinInstant(null);
+                        kryoClient.sendTCP(new Request("GC_fillMatch", gmgr.getMatchState().getMatchId().toString()));
+                    }
                 }
 
-                if (gmgr.getStartInstant() != null && ChronoUnit.SECONDS.between(gmgr.getStartInstant(), Instant.now()) > MATCH_START_MAX_DELAY_SEC && !isMatchStarted) {
-                    isMatchStarted = true;
-                    kryoClient.sendTCP(new Request("GC_start", gmgr.getMatchState().getMatchId().toString()));
+                if (gmgr.getStartInstant() != null) {
+                    if (timeSurpassed(gmgr.getStartInstant(), MATCH_START_MAX_DELAY_SEC) && !isMatchStarted) {
+                        isMatchStarted = true;
+                        kryoClient.sendTCP(new Request("GC_start", gmgr.getMatchState().getMatchId().toString()));
+                    }
+                }
+
+                if (gmgr.isRunningPhase()) {
+                    if (timeSurpassed(gmgr.getPhaseStartInstant(), gmgr.getPhaseDuration())) {
+                        System.out.println("TIME OVER");
+                    }
                 }
             }
         });
@@ -238,5 +252,9 @@ public class SchuClient extends GameClient {
     @Override
     public String toString() {
         return super.toString();
+    }
+
+    public static boolean timeSurpassed(Instant instant, int sec) {
+        return (instant != null && ChronoUnit.SECONDS.between(instant, Instant.now()) > sec);
     }
 }

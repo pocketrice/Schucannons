@@ -23,11 +23,12 @@ import org.javatuples.Pair;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
 import java.util.function.Consumer;
 
 import static io.github.pocketrice.client.GameManager.MATCH_START_MAX_DELAY_SEC;
+import static io.github.pocketrice.client.Match.truncVec;
 import static io.github.pocketrice.client.Match.truncate;
+import static io.github.pocketrice.client.SchuGame.*;
 
 // The HUD should contain dynamic things (options, popups, etc) but also persistent metrics. This is to be able to dynamically move things around.
 public class HUD {
@@ -37,20 +38,16 @@ public class HUD {
     };
     public static final Skin DEFAULT_SKIN = new Skin(Gdx.files.internal("skins/onett/skin/terra-mother-ui.json"));
 
-    public static final Fontbook fontbook = Fontbook.of("tinyislanders.ttf", "koholint.ttf", "dina.ttc", "tf2build.ttf", "tf2segundo.ttf", "benzin.ttf", "99occupy.ttf");
-    public static final Audiobox audiobox = Audiobox.of(List.of("hint.ogg", "slide_up.ogg", "slide_down.ogg"), List.of());
-
-
     private GameManager gmgr;
     private GameRenderer grdr;
     private SpriteBatch batch;
     private TextureAtlas mainSheet;
     private Sprite sprFlourish;
-    private Label labelTime, labelMatchInfo, labelTheta, labelMag;
-    private Table thetaMagPreview, thetaMagSelector;
+    private Label labelTime, labelMatchInfo, labelTheta, labelMag, labelMoveLim;
+    private Table sidebar;
     @Getter
     private Stage stage;
-    private ChainInterlerper phaseStartChIl; // chil = chain interlerper
+    private ChainInterlerper phaseStartChInterlerp; // chinter = chain interlerper
     private LinkInterlerper<Float, ? super Pair<Sprite, SpriteBatch>> phaseFlourishInterlerp;
     private LinkInterlerper<Float, ? super Pair<Label, SpriteBatch>> phaseTextInterlerp;
     private LinkInterlerper<Integer, ? super Pair<Table[], SpriteBatch>> thetaMagPosInterlerp;
@@ -58,10 +55,9 @@ public class HUD {
     private Interlerper<Float> matchInfoOpacityInterlerp;
     private Interlerper<Integer> matchInfoWaitAnimInterlerp;
 
-
     public HUD(GameManager gm, GameRenderer gr) {
         batch = new SpriteBatch();
-        fontbook.setBatch(batch);
+        fontbook.bind(batch);
         loadAssets();
 
         LabelStyle thetaMagPrevStyle = new LabelStyle();
@@ -72,40 +68,41 @@ public class HUD {
         thetaMagStyle.font = fontbook.getSizedBitmap("tf2build", 20);
         thetaMagStyle.fontColor = Color.valueOf("#afafaf");
 
+        LabelStyle moveLimStyle = new LabelStyle();
+
         Label thetaPreview = new Label("0 = ", thetaMagPrevStyle);
         Label magPreview = new Label("∥v∥ = ", thetaMagPrevStyle);
         Label thetaSel = new Label("0", thetaMagStyle);
         Label magSel = new Label("∥v∥", thetaMagStyle);
         labelTheta = new Label("0°", thetaMagPrevStyle);
         labelMag = new Label("0.0 m/s", thetaMagPrevStyle);
+        labelMoveLim = new Label("0m remaining", thetaMagStyle);
+        labelMoveLim.setPosition(VIEWPORT_WIDTH / 2f, VIEWPORT_HEIGHT - 30f);
 
-        BackgroundColor tmBg = BackgroundColor.generateSolidBg(Color.valueOf("#d3d2e97f"));
-        thetaMagPreview = new Table().left().pad(20f);
-        thetaMagPreview.setBackground(tmBg);
-        thetaMagPreview.setY(400);
-        thetaMagPreview.add(thetaPreview).pad(10f, 0f, 10f, 0f);
-        thetaMagPreview.add(labelTheta).left();
-        thetaMagPreview.row();
-        thetaMagPreview.add(magPreview).pad(10f, 0f, 10f, 0f);
-        thetaMagPreview.add(labelMag).left();
-        thetaMagPreview.row();
-
-        thetaMagSelector = new Table().left().pad(10f);
-        thetaMagSelector.setBackground(tmBg);
-        thetaMagSelector.setY(200);
-        thetaMagSelector.add(thetaSel).pad(10f, 10f, 10f, 10f);
-        thetaMagSelector.add(new NumberButton(audiobox, fontbook, true, true, "**°", 90f, 0f, 5f, labelTheta, DEFAULT_SKIN)).pad(10f);
-        thetaMagSelector.add(new NumberButton(audiobox, fontbook, false, true, "**°", 90f, 0f, 5f, labelTheta, DEFAULT_SKIN)).pad(10f);
-        thetaMagSelector.row();
-        thetaMagSelector.add(magSel).pad(10f, 15f, 10f, 15f);
-        thetaMagSelector.add(new NumberButton(audiobox, fontbook, true, true, " m/s", 90f, 0f, 3f, labelMag, DEFAULT_SKIN)).pad(10f);
-        thetaMagSelector.add(new NumberButton(audiobox, fontbook, false, true, " m/s", 90f, 0f, 3f, labelMag, DEFAULT_SKIN)).pad(10f);
-        thetaMagSelector.row();
+        BackgroundColor sbBg = BackgroundColor.generateSolidBg(Color.valueOf("#d3d2e97f"));
+        sidebar = new Table().left().pad(20f);
+        sidebar.setBackground(sbBg);
+        sidebar.setY(400);
+        sidebar.add(thetaPreview).pad(10f, 0f, 10f, 0f);
+        sidebar.add(labelTheta).left();
+        sidebar.row();
+        sidebar.add(magPreview).pad(10f, 0f, 10f, 0f);
+        sidebar.add(labelMag).left();
+        sidebar.row();
+        sidebar.add(thetaSel).pad(10f, 10f, 10f, 10f);
+        sidebar.add(new NumberButton(audiobox, fontbook, true, true, "**°", 90f, 0f, 5f, labelTheta, DEFAULT_SKIN)).pad(10f);
+        sidebar.add(new NumberButton(audiobox, fontbook, false, true, "**°", 90f, 0f, 5f, labelTheta, DEFAULT_SKIN)).pad(10f);
+        sidebar.row();
+        sidebar.add(magSel).pad(10f, 15f, 10f, 15f);
+        sidebar.add(new NumberButton(audiobox, fontbook, true, true, " m/s", 90f, 0f, 3f, labelMag, DEFAULT_SKIN)).pad(10f);
+        sidebar.add(new NumberButton(audiobox, fontbook, false, true, " m/s", 90f, 0f, 3f, labelMag, DEFAULT_SKIN)).pad(10f);
+        sidebar.row();
+        sidebar.add(new SchuButton())
 
         stage = new Stage();
-        stage.addActor(thetaMagSelector);
+        stage.addActor(sidebar);
 
-        phaseStartChIl = new ChainInterlerper();
+        phaseStartChInterlerp = new ChainInterlerper();
 
         phaseFlourishInterlerp = new LinkInterlerper<>(0f, 1f, EasingFunction.EASE_OUT_CUBIC, 0.012)
                 .linkObj(Pair.with(sprFlourish, batch))
@@ -158,28 +155,21 @@ public class HUD {
                 .postFunc(SPRBATCH_FUNC);
 
         thetaMagPosInterlerp = new LinkInterlerper<>(800, 700, EasingFunction.EASE_OUT_BACK, 0.01)
-                .linkObj(Pair.with(new Table[]{thetaMagPreview, thetaMagSelector}, batch))
+                .linkObj(Pair.with(sidebar, batch))
                 .linkFunc((t, obj) -> {
-                    Pair<Table[], SpriteBatch> batchPair = (Pair) obj;
-                    Table tmPreview = batchPair.getValue0()[0];
-                    Table tmSel = batchPair.getValue0()[1];
+                    Pair<Table, SpriteBatch> batchPair = (Pair) obj;
+                    Table sb = batchPair.getValue0();
                     SpriteBatch batch = batchPair.getValue1();
 
                     int lerpVal = thetaMagPosInterlerp.interlerp(t, EasingFunction.LINEAR);
-                    tmPreview.setX(lerpVal);
-                    tmSel.setX(lerpVal);
-
-                    tmPreview.draw(batch, 1f);
-                    tmSel.draw(batch, 1f);
+                    sb.setX(lerpVal);
+                    sb.draw(batch, 1f);
                 })
                 .preFunc(SPRBATCH_FUNC)
                 .postFunc(SPRBATCH_FUNC);
 
 
-
-
-
-        phaseStartChIl.addSublerp(1f, new ChainKeyframe(phaseFlourishInterlerp, (obj) -> {
+        phaseStartChInterlerp.addSublerp(1f, new ChainKeyframe(phaseFlourishInterlerp, (obj) -> {
             Pair<Sprite, SpriteBatch> batchPair = (Pair) obj;
             Sprite spr = batchPair.getValue0();
             SpriteBatch batch = batchPair.getValue1();
@@ -204,26 +194,22 @@ public class HUD {
                     false);
         }));
 
-        phaseStartChIl.addSublerp(2f, new ChainKeyframe(phaseTextInterlerp, (obj) -> {
+        phaseStartChInterlerp.addSublerp(2f, new ChainKeyframe<>(phaseTextInterlerp, (obj) -> {
             Pair<Label, SpriteBatch> pair = ChainKeyframe.extractPair(obj);
             pair.getValue0().draw(pair.getValue1(), 1f);
         }));
 
-        phaseStartChIl.addSublerp(2f, new ChainKeyframe(thetaMagPosInterlerp, (obj) -> {
-            Pair<Table[], SpriteBatch> pair = ChainKeyframe.extractPair(obj);
-            for (Table t : pair.getValue0()) {
-                t.draw(pair.getValue1(), 1f);
-            }
+        phaseStartChInterlerp.addSublerp(2f, new ChainKeyframe<>(thetaMagPosInterlerp, (obj) -> {
+            Pair<Table, SpriteBatch> pair = ChainKeyframe.extractPair(obj);
+            pair.getValue0().draw(pair.getValue1(), 1f);
         }));
 
         matchInfoOpacityInterlerp = new Interlerper<>(1f, 0f, EasingFunction.EASE_IN_OUT_CUBIC, 0.0025);
         matchInfoWaitAnimInterlerp = new Interlerper<>(0, 4, EasingFunction.LINEAR, 0.005);
         matchInfoWaitAnimInterlerp.setLooping(true);
-
         gmgr = gm;
         grdr = gr;
     }
-
 
     public void render() {
         Match matchState = gmgr.getMatchState();
@@ -233,21 +219,38 @@ public class HUD {
         fontbook.formatDraw("benzin", 24, Color.valueOf("#b8b1f22F"), matchState.getIdentifier(), new Vector2(700, 780));
 
         fontbook.font("tinyislanders").fontSize(30).fontColor(Color.valueOf("#d0cee08F"));
-        fontbook.formatDraw("X: " + projVec.x, new Vector2(30, 110));
-        fontbook.formatDraw("Y: " + projVec.y, new Vector2(30, 85));
-        fontbook.formatDraw("Z: " + projVec.z, new Vector2(30, 60));
+        fontbook.formatDraw("X: " + truncate(projVec.x, 2), new Vector2(30, 110));
+        fontbook.formatDraw("Y: " + truncate(projVec.y, 2), new Vector2(30, 85));
+        fontbook.formatDraw("Z: " + truncate(projVec.z, 2), new Vector2(30, 60));
 
-        switch (phase) {
-            case MOVE, PROMPT, SIM -> {
-                float deltaSec = ChronoUnit.MILLIS.between(gmgr.getPhaseStartInstant(), Instant.now()) / 1000f;
-                phaseStartChIl.apply(deltaSec, 0.02);
+        if (phase.val >= 1) { // <0 = invalid, 0 = end, >0 = active
+            float deltaTime = ChronoUnit.MILLIS.between(gmgr.getPhaseStartInstant(), Instant.now()) / 1000f;
+            int remainingSec = Math.max(0, gmgr.getPhaseDuration() - (int) deltaTime);
 
-                int remainingSec = gmgr.getPhaseTime() - (int) deltaSec;
-                labelTime.setText(remainingSec / 60 + ":" + ((remainingSec % 60 < 10) ? "0" : "") + remainingSec % 60);
+            switch (phase) {
+                case MOVE -> {
+                    labelMoveLim.setText(truncVec(gmgr.getClient().getSelf().getPos(), 2) + " m remaining [fix]");
+                    labelMoveLim.draw(batch, 1f);
+                    phaseStartChInterlerp.apply(deltaTime, 0.02);
+
+//                if (remainingSec < 3) {
+//                    phaseStartChinter.
+//                }
+                }
+                case PROMPT, SIM -> {
+                    phaseStartChInterlerp.apply(deltaTime, 0.02);
+                    labelTime.setText(remainingSec / 60 + ":" + ((remainingSec % 60 < 10) ? "0" : "") + remainingSec % 60);
+                }
             }
+        } else {
+            switch (phase) {
+                case ENDED -> {
 
-            case ENDED -> {
+                }
 
+                case INVALID -> {
+
+                }
             }
         }
 
@@ -256,8 +259,8 @@ public class HUD {
             labelMatchInfo.draw(batch, 1f);
         }
         else if (gmgr.getStartInstant() != null && ChronoUnit.SECONDS.between(gmgr.getStartInstant(), Instant.now()) < MATCH_START_MAX_DELAY_SEC) {
-            int remainingSec = MATCH_START_MAX_DELAY_SEC - (int) ChronoUnit.SECONDS.between(gmgr.getStartInstant(), Instant.now());
-            labelMatchInfo.setText("Players ready. Match starts in " + remainingSec / 60 + ":" + ((remainingSec % 60 < 10) ? "0" : "") + remainingSec % 60);
+            int startDelaySec = MATCH_START_MAX_DELAY_SEC - (int) ChronoUnit.SECONDS.between(gmgr.getStartInstant(), Instant.now());
+            labelMatchInfo.setText("Players ready. Match starts in " + startDelaySec / 60 + ":" + ((startDelaySec % 60 < 10) ? "0" : "") + startDelaySec % 60);
             labelMatchInfo.draw(batch, 1f);
         }
         else if (gmgr.getStartInstant() != null){
@@ -288,6 +291,14 @@ public class HUD {
 
         batch.end();
         stage.act();
+    }
+
+    public float getTheta() {
+        return Float.parseFloat(NumberButton.revertSuffix(labelTheta.getText().toString(), "**°"));
+    }
+
+    public float getMag() {
+        return Float.parseFloat(NumberButton.revertSuffix(labelMag.getText().toString(), "** m/s"));
     }
 
     public void loadAssets() {

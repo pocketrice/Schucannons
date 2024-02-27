@@ -1,11 +1,15 @@
 package io.github.pocketrice.client;
 
+import lombok.Getter;
+import lombok.Setter;
 import org.javatuples.Pair;
 
 import java.util.*;
 
 public class ChainInterlerper {
     Map<Float, Set<ChainKeyframe>> sublerps;
+    @Getter @Setter
+    boolean isForward;
 
     public ChainInterlerper() {
         sublerps = new TreeMap<>();
@@ -22,11 +26,21 @@ public class ChainInterlerper {
         sublerps.get(t).add(ckf);
     }
 
-
+    public void changeSublerpTarget(ChainKeyframe ckf, Object newTarget) {
+        ckf.linkInterlerp.setLinkObj(newTarget);
+    }
 
     public Set<ChainKeyframe> getSublerp(float t) {
         return sublerps.get(t);
     }
+
+//    public List<ChainKeyframe> getLerps() {
+//        List<ChainKeyframe> lerps = new
+//        for (Set<ChainKeyframe> keyframes : sublerps.values()) {
+//
+//        }
+//    }
+
 
     public void apply(float deltaT, double stepSize) {
          List<Float> times = sublerps.keySet().stream().toList();
@@ -36,4 +50,8 @@ public class ChainInterlerper {
              }
          }
     }
+
+//    public void setForward(boolean isForward) {
+//        for (ChainKeyframe ckf : )
+//    }
 }

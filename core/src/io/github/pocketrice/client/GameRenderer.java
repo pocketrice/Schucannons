@@ -4,6 +4,7 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.InputMultiplexer;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g3d.Environment;
@@ -12,12 +13,16 @@ import com.badlogic.gdx.graphics.g3d.ModelBatch;
 import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
+import com.badlogic.gdx.graphics.g3d.loader.G3dModelLoader;
+import com.badlogic.gdx.graphics.g3d.loader.ObjLoader;
 import com.badlogic.gdx.graphics.g3d.utils.CameraInputController;
 import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.graphics.glutils.GLFrameBuffer.FrameBufferBuilder;
 import com.badlogic.gdx.math.Quaternion;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.IntSet;
+import com.badlogic.gdx.utils.JsonReader;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.crashinvaders.vfx.VfxManager;
 import com.crashinvaders.vfx.effects.ChainVfxEffect;
@@ -30,18 +35,17 @@ import io.github.pocketrice.client.ui.HUD;
 import io.github.pocketrice.shared.Interlerper;
 import lombok.Getter;
 import lombok.Setter;
+import net.mgsx.gltf.loaders.glb.GLBLoader;
+import net.mgsx.gltf.loaders.gltf.GLTFLoader;
+import org.javatuples.Triplet;
 
-import java.util.List;
 import java.util.UUID;
 
-import static io.github.pocketrice.client.SchuGame.VIEWPORT_HEIGHT;
-import static io.github.pocketrice.client.SchuGame.VIEWPORT_WIDTH;
-import static io.github.pocketrice.client.screens.MenuScreen.loadModel;
+import static io.github.pocketrice.client.SchuGame.*;
 
 // Turns backend logic into glorious rendering. As in, take crap from GameManager that's from the server and move stuff around. All rendering is ONLY in this class.
 // This should only be used for GameScreen.
 public class GameRenderer {
-    final Audiobox audiobox = Audiobox.of(List.of("hitsound.ogg", "duel_challenge.ogg", "vote_started.ogg"), List.of());
     ModelGroup cannonA, cannonB;
     ModelInstance envMi, projMi, skyMi;
     ModelBatch modelBatch;
@@ -89,7 +93,7 @@ public class GameRenderer {
         envMi.transform.scl(2f);
         envMi.transform.rotate(new Quaternion(Vector3.Z, (float) (Math.PI * 2)));
         projMi = new ModelInstance(PROJ_MODEL);
-        projMi.transform.scl(10f);
+        //projMi.transform.scl(10f);
 
         postBatch = new SpriteBatch();
         postprocBlur = new BlurPostProcessor(15, 4f, 0.3f, postBatch);
@@ -111,7 +115,7 @@ public class GameRenderer {
         cannonA.addSubmodel(CANNON_WHEEL_MODEL, new Vector3(0f, -0.05f, 0.05f), new Quaternion());
         cannonA.addSubmodel(CANNON_WHEEL_MODEL, new Vector3( 0f, -0.05f, -0.05f)/*new Vector3(0.1f, -0.05f, 0.1f)*/, new Quaternion(Vector3.Y, (float) (Math.PI * 2)));
         cannonA.applyOffsets();
-        cannonA.scl(5f); // tip: getTranslation is not distance from that particular vec3... it instead stores it in the passed-in vec. Oups! 1 hour debugging.
+       // cannonA.scl(5f); // tip: getTranslation is not distance from that particular vec3... it instead stores it in the passed-in vec. Oups! 1 hour debugging.
 
         cannonB = cannonA.cpy();
         cannonB.setGroupName("cannonB");
@@ -243,7 +247,10 @@ public class GameRenderer {
         ScreenUtils.clear(Color.valueOf("#4d4a71"), true);
         modelBatch.begin(gameCam);
         modelBatch.render(envMi, env);
+        cannonA.getSubmodel(0).transform.setFromEulerAngles(0, 0, -hud.getTheta());
+        gmgr.getClient().getSelf().setProjVector(sphericalToRect(hud.getMag(), degToRad(hud.getTheta()), Math.PI / 2f));
         cannonA.render(modelBatch);
+        cannonB.getSubmodel(0).transform.setFromEulerAngles(0, 0, -hud.getTheta());
         cannonB.render(modelBatch);
         modelBatch.render(projMi, env);
         modelBatch.end();
@@ -262,6 +269,33 @@ public class GameRenderer {
 
         playerModel.getSubmodel(0).transform.rotate(new Quaternion(Vector3.Y, (float) (Math.PI - phi))); // Replace barrel meshpart with rotated meshpart (π - φ for complement b/c cannon defaults to laying horizontally).
         playerModel.rotate(new Quaternion(Vector3.Z, theta));
+    }
+
+    public static Triplet<Float, Double, Double> rectToSpherical(Vector3 rectVec) {
+        float rho = rectVec.len(); // does not need to be 3d b/c len is always same
+        double theta = Math.atan(rectVec.y / rectVec.x);
+        double phi = Math.acos(rectVec.z / rho);
+        return Triplet.with(rho, theta, phi);
+    }
+
+    public static Vector2 polarToRect(float r, double theta) {
+        return new Vector2((float) (r * Math.cos(theta)), (float) (r * Math.sin(theta)));
+    }
+
+    public static Vector3 sphericalToRect(float rho, double theta, double phi) {
+        float x = (float) (rho * Math.sin(phi) * Math.cos(theta));
+        float y = (float) (rho * Math.sin(phi) * Math.sin(theta));
+        float z = (float) (rho * Math.cos(phi));
+
+        return new Vector3(x,y,z);
+    }
+
+    public static double radToDeg(double radAng) {
+        return radAng * 180 / Math.PI;
+    }
+
+    public static double degToRad(double degAng) {
+        return degAng * Math.PI / 180;
     }
 
     public void update() {
@@ -304,5 +338,24 @@ public class GameRenderer {
         }
 
         return vfm;
+    }
+
+    public static Model loadModel(FileHandle filehandle) {
+        Model res;
+
+        String[] handleStrs = filehandle.toString().split("\\.");
+        switch (handleStrs[handleStrs.length - 1].toLowerCase()) {
+            case "gltf" -> res = new GLTFLoader().load(filehandle).scene.model;
+
+            case "glb" -> res = new GLBLoader().load(filehandle).scene.model;
+
+            case "obj" -> res = new ObjLoader().loadModel(filehandle);
+
+            case "g3db" -> res = new G3dModelLoader(new JsonReader()).loadModel(filehandle);
+
+            default -> res = null;
+        }
+
+        return res;
     }
 }

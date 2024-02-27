@@ -11,11 +11,10 @@ import lombok.Setter;
 public class Interlerper<T> {
     private T startVal, endVal;
     private EasingFunction easing;
-    private double t;
-    @Getter @Setter
+    @Setter
     private boolean isLooping, isInterlerp, isForward;
     @Setter
-    private double stepSize;
+    private double stepSize, t;
 
 
 

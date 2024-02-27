@@ -270,20 +270,20 @@ public class Match implements Comparable<Match> {
             val = i;
         }
 
-        final int val;
+        public final int val;
     }
 
     public enum PhaseType {
         INVALID(-1),
-        MOVE(0),
-        PROMPT(1),
-        SIM(2),
-        ENDED(3);
+        MOVE(1),
+        PROMPT(2),
+        SIM(3),
+        ENDED(0);
 
         PhaseType(int i) {
             val = i;
         }
 
-        final int val;
+        public final int val;
     }
 }

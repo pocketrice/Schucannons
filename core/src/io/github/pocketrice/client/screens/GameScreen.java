@@ -8,26 +8,24 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Stage;
-import com.badlogic.gdx.scenes.scene2d.ui.Skin;
-import io.github.pocketrice.client.Audiobox;
-import io.github.pocketrice.client.Fontbook;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton.TextButtonStyle;
 import io.github.pocketrice.client.GameManager;
 import io.github.pocketrice.client.GameRenderer;
-import io.github.pocketrice.client.ui.OkButton;
+import io.github.pocketrice.client.ui.SchuButton;
+import io.github.pocketrice.client.ui.StartButton;
+import io.github.pocketrice.shared.EasingFunction;
+import io.github.pocketrice.shared.LinkInterlerper;
 import lombok.Setter;
 
-import java.util.List;
+import static io.github.pocketrice.client.SchuGame.fontbook;
 
 public class GameScreen extends ScreenAdapter {
-    private final Fontbook fontbook = Fontbook.of("koholint.ttf", "dina.ttc", "tf2build.ttf", "tf2segundo.ttf", "delfino.ttf", "kyomadoka.ttf");
-    private final Audiobox audiobox = Audiobox.of(List.of("buttonclick.ogg", "buttonclickrelease.ogg", "hint.ogg"), List.of());
-
     private SpriteBatch batch;
     private OrthographicCamera camera;
     private GameRenderer grdr;
     private GameManager gmgr;
     private Stage stage;
-    private OkButton btnOk;
+    private SchuButton btnStart;
     @Setter
     private boolean isPromptReady; // terrible
 
@@ -37,12 +35,31 @@ public class GameScreen extends ScreenAdapter {
 
         grdr = gr;
         gmgr = gm;
-        fontbook.setBatch(batch);
+        fontbook.bind(batch);
 
-        btnOk = new OkButton(gm, this, audiobox, fontbook, new Skin(Gdx.files.internal("skins/onett/skin/terra-mother-ui.json")));
-        btnOk.setPosition(Gdx.graphics.getWidth() / 2f - 30f, Gdx.graphics.getHeight() / 2f - 90f);
+        TextButtonStyle tbsStart = new TextButtonStyle();
+        tbsStart.font = fontbook.getSizedBitmap("tf2build", 60);
+
+        btnStart = new SchuButton("TO WAR!", tbsStart);
+        btnStart.setPosition(Gdx.graphics.getWidth() / 2f - 30f, Gdx.graphics.getHeight() / 2f - 90f);
         stage = new Stage();
-        stage.addActor(btnOk);
+        stage.addActor(btnStart);
+        interlerpFontSize = new LinkInterlerper<>(45, 50, EasingFunction.EASE_IN_OUT_SINE, 0.04)
+                .linkObj(this)
+                .linkFunc((t, obj) -> {
+                    StartButton rb = (StartButton) obj; // vv The easing is ALWAYS linear here, because step() already applies an easing.
+                    int fontSize = interlerpFontSize.interlerp(t, EasingFunction.LINEAR); // Rmeember that interlerp returns double b/c covers most numbertypes.
+                    rb.tbs.font = fontbook.getSizedBitmap("tf2build", fontSize);
+                    rb.setStyle(tbs);
+                });
+
+        interlerpColor = new LinkInterlerper<>(Color.valueOf("#afafdd"), Color.valueOf("#e2e5f3"), EasingFunction.EASE_IN_OUT_SINE, 0.04)
+                .linkObj(this)
+                .linkFunc((t, obj) -> {
+                    StartButton rb = (StartButton) obj;
+                    rb.tbs.fontColor = interlerpColor.interlerp(t, EasingFunction.LINEAR);
+                    rb.setStyle(tbs);
+                });
     }
 
     @Override
@@ -65,7 +82,7 @@ public class GameScreen extends ScreenAdapter {
 
             batch.begin();
             fontbook.draw("All ready?", new Vector2(Gdx.graphics.getWidth() / 2f - 70f, Gdx.graphics.getHeight() / 2f + 70f));
-            btnOk.draw(batch, 1f);
+            btnStart.draw(batch, 1f);
             batch.end();
 
 

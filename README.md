@@ -20,5 +20,7 @@ LibGDX projectile motion cannon game and AP Physics 1 teaching aid for IB CS HL 
 
 
 ![cycles_render](https://github.com/PocketRice/Schucannons/assets/79682953/3d182703-4fb2-4330-b22d-5b84f8dfde0c)
-![ig_menu](https://github.com/PocketRice/Schucannons/assets/79682953/e3070efd-838f-4280-b7c2-4b3daf5050de)
-![ig_load](https://github.com/PocketRice/Schucannons/assets/79682953/d3e56eef-448b-4f73-bc20-6a2fef394993)
+![ig_menu](https://github.com/PocketRice/Schucannons/assets/79682953/aea28511-777b-4fae-b326-fc02d95e4407)
+![ig_load](https://github.com/PocketRice/Schucannons/assets/79682953/e3070efd-838f-4280-b7c2-4b3daf5050de)
+![ig_ok](https://github.com/PocketRice/Schucannons/assets/79682953/e820cfeb-227f-44a6-b595-abfc0161c742)
+![ig_gameproto](https://github.com/PocketRice/Schucannons/assets/79682953/9f991523-6763-49ea-8f06-5c4fb9f10f24)
