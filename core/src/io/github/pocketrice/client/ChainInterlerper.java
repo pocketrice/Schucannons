@@ -1,19 +1,22 @@
 package io.github.pocketrice.client;
 
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import io.github.pocketrice.client.ui.Batchable;
+import io.github.pocketrice.client.ui.BatchableException;
 import lombok.Getter;
-import lombok.Setter;
 import org.javatuples.Pair;
 
 import java.util.*;
 
 public class ChainInterlerper {
     Map<Float, Set<ChainKeyframe>> sublerps;
-    @Getter @Setter
+    @Getter
     boolean isForward;
 
     public ChainInterlerper() {
         sublerps = new TreeMap<>();
     }
+    @SafeVarargs
     public ChainInterlerper(Pair<Float, ChainKeyframe>... keyframes) {
         sublerps = new TreeMap<>();
         for (Pair<Float, ChainKeyframe> kf : keyframes) {
@@ -34,15 +37,16 @@ public class ChainInterlerper {
         return sublerps.get(t);
     }
 
-//    public List<ChainKeyframe> getLerps() {
-//        List<ChainKeyframe> lerps = new
-//        for (Set<ChainKeyframe> keyframes : sublerps.values()) {
-//
-//        }
-//    }
+    public List<ChainKeyframe> getLerps() {
+        List<ChainKeyframe> lerps = new ArrayList<>();
+        for (Set<ChainKeyframe> keyframes : sublerps.values()) {
+            lerps.addAll(keyframes);
+        }
 
+        return lerps;
+    }
 
-    public void apply(float deltaT, double stepSize) {
+    public void step(float deltaT, double stepSize) {
          List<Float> times = sublerps.keySet().stream().toList();
          for (float time : times) {
              if (deltaT >= time) {
@@ -51,7 +55,21 @@ public class ChainInterlerper {
          }
     }
 
-//    public void setForward(boolean isForward) {
-//        for (ChainKeyframe ckf : )
-//    }
+    // Should not be called if CKFs do not all contain Batchables
+    public void draw(SpriteBatch batch) {
+        getLerps().stream()
+                .filter(l -> Batchable.isBatchable(l.linkInterlerp.getLinkObj()))
+                .map(Batchable::new)
+                .forEach(b -> {
+                    try {
+                        b.draw(batch);
+                    } catch (BatchableException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+    }
+
+    public void setForward(boolean isForward) {
+        getLerps().forEach(l -> l.linkInterlerp.setForward(isForward));
+    }
 }

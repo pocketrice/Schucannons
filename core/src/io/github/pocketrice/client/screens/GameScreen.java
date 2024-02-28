@@ -8,58 +8,63 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Stage;
-import com.badlogic.gdx.scenes.scene2d.ui.TextButton.TextButtonStyle;
-import io.github.pocketrice.client.GameManager;
-import io.github.pocketrice.client.GameRenderer;
+import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import io.github.pocketrice.client.*;
+import io.github.pocketrice.client.ui.BatchGroup;
+import io.github.pocketrice.client.ui.Batchable;
+import io.github.pocketrice.client.ui.Batchable.InterlerpPreset;
+import io.github.pocketrice.client.ui.BatchableException;
 import io.github.pocketrice.client.ui.SchuButton;
-import io.github.pocketrice.client.ui.StartButton;
 import io.github.pocketrice.shared.EasingFunction;
-import io.github.pocketrice.shared.LinkInterlerper;
+import io.github.pocketrice.shared.Request;
 import lombok.Setter;
 
-import static io.github.pocketrice.client.SchuGame.fontbook;
+import java.util.List;
 
 public class GameScreen extends ScreenAdapter {
+    private Audiobox audiobox;
+    private Fontbook fontbook;
     private SpriteBatch batch;
+    private BatchGroup batchGroup;
     private OrthographicCamera camera;
     private GameRenderer grdr;
     private GameManager gmgr;
+    private SchuAssetManager amgr;
     private Stage stage;
-    private SchuButton btnStart;
     @Setter
     private boolean isPromptReady; // terrible
 
-    public GameScreen(GameRenderer gr, GameManager gm) {
+    public GameScreen( GameManager gm, GameRenderer gr) throws BatchableException {
         batch = new SpriteBatch();
+        batchGroup = new BatchGroup();
         camera = new OrthographicCamera();
 
-        grdr = gr;
+        amgr = gm.getAmgr();
         gmgr = gm;
+        grdr = gr;
+        audiobox = amgr.getAudiobox();
+        fontbook = amgr.getFontbook();
         fontbook.bind(batch);
 
-        TextButtonStyle tbsStart = new TextButtonStyle();
-        tbsStart.font = fontbook.getSizedBitmap("tf2build", 60);
+        TextButton btnStart = new SchuButton("TO WAR!", SchuButton.generateStyle("tf2build", Color.WHITE, 60), amgr)
+                .activeObjs(List.of(gmgr, this))
+                .activeFunc((objs) -> {
+                    GameManager gman = (GameManager) objs.get(0);
+                    GameScreen gsc = (GameScreen) objs.get(1);
 
-        btnStart = new SchuButton("TO WAR!", tbsStart);
-        btnStart.setPosition(Gdx.graphics.getWidth() / 2f - 30f, Gdx.graphics.getHeight() / 2f - 90f);
+                    gman.getClient().getSelf().setReady(true);
+                    gman.getMatchState().updateState();
+                    gman.getClient().getKryoClient().sendTCP(new Request("GC_ready", gman.getMatchState().getMatchId() + "|" + gman.getClient().getSelf().getPlayerId()));
+                    gsc.finishPrompt();
+                });
+
+        batchGroup.add(new Batchable(btnStart)
+                .pos((int) (Gdx.graphics.getWidth() / 2f - 30f), (int) (Gdx.graphics.getHeight() / 2f - 90f))
+                .bindInterlerp(45, 50, InterlerpPreset.FONT_SIZE, EasingFunction.EASE_IN_OUT_SINE, 0.04)
+                .bindInterlerp(Color.valueOf("#afafdd"), Color.valueOf("#e2e5f3"), InterlerpPreset.COLOR, EasingFunction.EASE_IN_OUT_SINE, 0.04));
+
         stage = new Stage();
         stage.addActor(btnStart);
-        interlerpFontSize = new LinkInterlerper<>(45, 50, EasingFunction.EASE_IN_OUT_SINE, 0.04)
-                .linkObj(this)
-                .linkFunc((t, obj) -> {
-                    StartButton rb = (StartButton) obj; // vv The easing is ALWAYS linear here, because step() already applies an easing.
-                    int fontSize = interlerpFontSize.interlerp(t, EasingFunction.LINEAR); // Rmeember that interlerp returns double b/c covers most numbertypes.
-                    rb.tbs.font = fontbook.getSizedBitmap("tf2build", fontSize);
-                    rb.setStyle(tbs);
-                });
-
-        interlerpColor = new LinkInterlerper<>(Color.valueOf("#afafdd"), Color.valueOf("#e2e5f3"), EasingFunction.EASE_IN_OUT_SINE, 0.04)
-                .linkObj(this)
-                .linkFunc((t, obj) -> {
-                    StartButton rb = (StartButton) obj;
-                    rb.tbs.fontColor = interlerpColor.interlerp(t, EasingFunction.LINEAR);
-                    rb.setStyle(tbs);
-                });
     }
 
     @Override
@@ -82,11 +87,8 @@ public class GameScreen extends ScreenAdapter {
 
             batch.begin();
             fontbook.draw("All ready?", new Vector2(Gdx.graphics.getWidth() / 2f - 70f, Gdx.graphics.getHeight() / 2f + 70f));
-            btnStart.draw(batch, 1f);
+            batchGroup.draw(batch);
             batch.end();
-
-
-
         } else {
             if (grdr.isPromptBlur()) grdr.setPromptBlur(false);
         }

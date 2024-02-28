@@ -85,7 +85,9 @@ public class SchuClient extends GameClient {
 
                             case "GS_plList" -> gmgr.receivePlayerList(rp.getPayload());
 
-                            case "GS_pl" -> gmgr.receiveServerUpdate(rp.getPayload());
+                            case "GS_pl" -> {
+                                gmgr.receiveServerUpdate(rp.getPayload());
+                            }
 
                             case "GS_ping" -> {
                                 Instant endPingTime = Instant.now(); // Save now to ensure post-ping ops do not add delay

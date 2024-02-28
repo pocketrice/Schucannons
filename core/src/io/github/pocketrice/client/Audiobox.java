@@ -3,47 +3,41 @@ package io.github.pocketrice.client;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
-import io.github.pocketrice.shared.FuzzySearch;
 
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+
+import static io.github.pocketrice.client.SchuGame.getGlobalAmgr;
 
 // TODO: implement TuningFork's custom sound effects.
 public class Audiobox {
     static final float MASTER_VOLUME = 0.2f;
-
-    Map<String, Sound> sfxs;
-    Map<String, Music> bgms;
+    List<String> sfxs;
+    List<String> bgms;
+    SchuAssetManager amgr;
 
     public Audiobox() {
-        sfxs = new HashMap<>();
-        bgms = new HashMap<>();
+        sfxs = new ArrayList<>();
+        bgms = new ArrayList<>();
     }
 
-    public Sound getFuzzySfx(String name) {
-        FuzzySearch fs = new FuzzySearch(sfxs.keySet());
-        String res = fs.getFuzzy(name)[0];
-        return sfxs.get(res);
+    public void setAmgr(SchuAssetManager am) {
+        amgr = am;
     }
 
-    public Music getFuzzyBgm(String name) {
-        FuzzySearch fs = new FuzzySearch(bgms.keySet());
-        String res = fs.getFuzzy(name)[0];
+    public void loadAudio(boolean isSfx, String alias) {
+        String audioFile = (alias.matches(".*\\.[a-z0-9]+") ? alias : amgr.fzf(alias)[0]);
+        if (!Gdx.files.internal("audio/" + audioFile).exists()) System.err.println("Warning: " + audioFile + " does not exist.");
+        if (!audioFile.matches(".*(\\.ogg|\\.mp3|\\.wav)")) System.err.println("Warning: " + audioFile + " is not .ogg, .wav, or .mp3 format. Likely will not load.");
 
-        return bgms.get(res);
-    }
-
-    public void loadAudio(boolean isSfx, String audioFile) {
-        if (!audioFile.matches(".*(\\.ogg|\\.mp3|\\.wav).*")) System.err.println("Warning: " + audioFile + " is not .ogg, .wav, or .mp3 format. Likely will not load.");
-
-        if (isSfx) {
-            Sound sfx = Gdx.audio.newSound(Gdx.files.internal("audio/" + audioFile));
-            sfxs.put(audioFile, sfx);
-        } else {
-            Music bgm = Gdx.audio.newMusic(Gdx.files.internal("audio/" + audioFile));
-            bgm.setLooping(true);
-            bgms.put(audioFile, bgm);
+        if (!amgr.isLoaded("audio/" + audioFile)) {
+            if (isSfx) {
+                amgr.aliasedLoad("audio/" + audioFile, alias, Sound.class);
+                sfxs.add(audioFile);
+            } else {
+                amgr.aliasedLoad("audio/" + audioFile, alias, Music.class);
+                bgms.add(audioFile);
+            }
         }
     }
 
@@ -54,34 +48,44 @@ public class Audiobox {
     }
 
     public void playSfx(String sfx, float volume) {
-        Sound sound = getFuzzySfx(sfx);
+        Sound sound = amgr.fuzzyGet(sfx, Sound.class);
         sound.play(volume * MASTER_VOLUME);
     }
 
     public void playBgm(String bgm, float volume) {
-        Music music = getFuzzyBgm(bgm);
+        Music music = amgr.fuzzyGet(bgm, Music.class);
+        music.setLooping(true);
         music.setVolume(volume * MASTER_VOLUME);
         music.play();
     }
 
+    // Should not store assets to collector class since that creates duplicates. Thus, only stores names (""pointers"")
     public void stopBgm(String bgm) {
-       Music music = getFuzzyBgm(bgm);
+       Music music = amgr.fuzzyGet(bgm, Music.class);
        music.stop();
+    }
+
+    public static Audiobox of(String... sfxs) {
+        Audiobox abox = new Audiobox();
+        abox.amgr = getGlobalAmgr();
+        abox.loadAudios(true, sfxs);
+        abox.loadAudios(false);
+
+        return abox;
     }
 
     public static Audiobox of(List<String> sfxs, List<String> bgms) {
         Audiobox abox = new Audiobox();
+        abox.amgr = getGlobalAmgr();
         abox.loadAudios(true, sfxs.toArray(new String[0]));
         abox.loadAudios(false, bgms.toArray(new String[0]));
 
         return abox;
     }
 
-
-
     public void dispose() {
-        sfxs.values().forEach(Sound::dispose);
-        bgms.values().forEach(Music::dispose);
+        sfxs.forEach(s -> amgr.unload("audio/" + s));
+        bgms.forEach(s -> amgr.unload("audio/" + s));
 
         sfxs.clear();
         bgms.clear();

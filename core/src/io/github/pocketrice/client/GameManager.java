@@ -9,17 +9,20 @@ import lombok.Setter;
 
 import java.time.Instant;
 import java.util.Arrays;
-import java.util.List;
 import java.util.UUID;
 
 // Does all the nitty-gritty client stuffs. Unpack server payloads, handle interp...
 public class GameManager {
     public static final int MATCH_START_MAX_DELAY_SEC = 10;
 
+    private Audiobox audiobox;
+    private Fontbook fontbook;
     @Getter @Setter
     private GameClient client;
+    @Getter
+    private SchuAssetManager amgr;
     @Setter
-    private GameRenderer grdr;
+    private volatile GameRenderer grdr;
     @Getter
     private SchuGame game;
     private Match match; // This is a local-only compilation of ServerPayloads — for ease of storage.
@@ -41,6 +44,12 @@ public class GameManager {
     public GameManager(SchuGame sg) {
         match = new Match();
         game = sg;
+        amgr = game.getAmgr();
+        audiobox = amgr.getAudiobox();
+        fontbook = amgr.getFontbook();
+        fontbook.setAmgr(amgr);
+        audiobox.setAmgr(amgr);
+
         isClientConnected = false;
         phaseType = PhaseType.INVALID;
     }
@@ -69,6 +78,13 @@ public class GameManager {
 
     public void receiveServerUpdate(Object payload) {
         decompilePayload((ServerPayload) payload);
+
+        // Wait for assets/GameRenderer to be completely loaded. Notice that client/server communication is done prior to waiting.
+        // FIXME TODO URGENT README IMPORTANT NEED TO MOVE THIS OUT OF MAIN THREAD!!!!!!!
+        while (grdr == null) {
+            Thread.onSpinWait();
+        }
+
         grdr.update();
     }
 

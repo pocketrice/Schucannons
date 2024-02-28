@@ -41,11 +41,14 @@ import org.javatuples.Triplet;
 
 import java.util.UUID;
 
-import static io.github.pocketrice.client.SchuGame.*;
+import static io.github.pocketrice.client.SchuGame.VIEWPORT_HEIGHT;
+import static io.github.pocketrice.client.SchuGame.VIEWPORT_WIDTH;
 
 // Turns backend logic into glorious rendering. As in, take crap from GameManager that's from the server and move stuff around. All rendering is ONLY in this class.
 // This should only be used for GameScreen.
 public class GameRenderer {
+    public static final Vector3 CAMERA_POS = new Vector3(0f, 2f, 0f), CAMERA_LOOK = new Vector3(2f, 5f, 2f);
+
     ModelGroup cannonA, cannonB;
     ModelInstance envMi, projMi, skyMi;
     ModelBatch modelBatch;
@@ -73,26 +76,37 @@ public class GameRenderer {
     HUD hud;
     Environment env;
     GameManager gmgr;
+    SchuAssetManager amgr;
+    Audiobox audiobox;
+    Fontbook fontbook;
 
-    boolean isPaused, isPauseFirstPass, isEffectsUpdated;
+    boolean isPaused, isPauseFirstPass, isEffectsUpdated, isAssetsLoaded;
     @Getter @Setter
     boolean isPromptBlur;
 
 
-    public static final Model ENV_MODEL = loadModel(Gdx.files.internal("models/terrain.glb"));
-    public static final Model SKY_MODEL = loadModel(Gdx.files.internal("models/skypano.obj"));
-    public static final Model PROJ_MODEL = loadModel(Gdx.files.internal("models/cannonball.gltf"));
-    public static final Model CANNON_BARREL_MODEL = loadModel(Gdx.files.internal("models/schubarrel.obj"));
-    public static final Model CANNON_WHEEL_MODEL = loadModel(Gdx.files.internal("models/schuwheel.obj"));
-    public static final Vector3 CAMERA_POS = new Vector3(0f, 2f, 0f), CAMERA_LOOK = new Vector3(2f, 5f, 2f);
-
-
     public GameRenderer(GameManager gm) {
+        amgr = gm.getAmgr();
+        gmgr = gm;
+        audiobox = amgr.getAudiobox();
+        fontbook = amgr.getFontbook();
+
         modelBatch = new ModelBatch();
-        envMi = new ModelInstance(SKY_MODEL); // TEMP - need to optimise this to load on loading screen.
+        envMi = new ModelInstance(amgr.aliasedGet("modelSky", Model.class));
         envMi.transform.scl(2f);
         envMi.transform.rotate(new Quaternion(Vector3.Z, (float) (Math.PI * 2)));
-        projMi = new ModelInstance(PROJ_MODEL);
+        projMi = new ModelInstance(amgr.aliasedGet("modelCannonProj", Model.class));
+
+        cannonA = new ModelGroup();
+        cannonA.setGroupName("cannonA");
+        cannonA.addSubmodel(amgr.aliasedGet("modelCannonBarrel", Model.class), Vector3.Zero, new Quaternion());
+        cannonA.addSubmodel(amgr.aliasedGet("modelCannonWheel", Model.class), new Vector3(0f, -0.05f, 0.05f), new Quaternion());
+        cannonA.addSubmodel(amgr.aliasedGet("modelCannonWheel", Model.class), new Vector3( 0f, -0.05f, -0.05f)/*new Vector3(0.1f, -0.05f, 0.1f)*/, new Quaternion(Vector3.Y, (float) (Math.PI * 2)));
+        cannonA.applyOffsets();
+        // cannonA.scl(5f); // tip: getTranslation is not distance from that particular vec3... it instead stores it in the passed-in vec. Oups! 1 hour debugging.
+
+        cannonB = cannonA.cpy();
+        cannonB.setGroupName("cannonB");
         //projMi.transform.scl(10f);
 
         postBatch = new SpriteBatch();
@@ -108,19 +122,6 @@ public class GameRenderer {
         vfxManager.addEffect(vfxAscii, 2);
         vfxManager.addEffect(vfxHalftone, 3);
 
-
-        cannonA = new ModelGroup();
-        cannonA.setGroupName("cannonA");
-        cannonA.addSubmodel(CANNON_BARREL_MODEL, Vector3.Zero, new Quaternion());
-        cannonA.addSubmodel(CANNON_WHEEL_MODEL, new Vector3(0f, -0.05f, 0.05f), new Quaternion());
-        cannonA.addSubmodel(CANNON_WHEEL_MODEL, new Vector3( 0f, -0.05f, -0.05f)/*new Vector3(0.1f, -0.05f, 0.1f)*/, new Quaternion(Vector3.Y, (float) (Math.PI * 2)));
-        cannonA.applyOffsets();
-       // cannonA.scl(5f); // tip: getTranslation is not distance from that particular vec3... it instead stores it in the passed-in vec. Oups! 1 hour debugging.
-
-        cannonB = cannonA.cpy();
-        cannonB.setGroupName("cannonB");
-
-        gmgr = gm;
         hud = new HUD(gmgr, this);
         gameCam = new PerspectiveCamera(80, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
         gameCam.position.set(CAMERA_POS);
@@ -340,10 +341,11 @@ public class GameRenderer {
         return vfm;
     }
 
-    public static Model loadModel(FileHandle filehandle) {
+    public static Model loadModel(String filepath) {
         Model res;
+        FileHandle filehandle = Gdx.files.internal(filepath);
+        String[] handleStrs = filepath.split("\\.");
 
-        String[] handleStrs = filehandle.toString().split("\\.");
         switch (handleStrs[handleStrs.length - 1].toLowerCase()) {
             case "gltf" -> res = new GLTFLoader().load(filehandle).scene.model;
 

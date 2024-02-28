@@ -18,10 +18,12 @@ import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
-import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
-import com.badlogic.gdx.scenes.scene2d.ui.TextButton.TextButtonStyle;
 import com.badlogic.gdx.utils.Align;
+import io.github.pocketrice.client.Audiobox;
+import io.github.pocketrice.client.Fontbook;
+import io.github.pocketrice.client.SchuAssetManager;
 import io.github.pocketrice.client.SchuGame;
+import io.github.pocketrice.client.ui.BatchGroup;
 import io.github.pocketrice.client.ui.SchuButton;
 import io.github.pocketrice.client.ui.SchuMenuButton;
 import io.github.pocketrice.shared.LinkInterlerper;
@@ -29,13 +31,12 @@ import io.github.pocketrice.shared.LinkInterlerper;
 import java.util.Arrays;
 import java.util.List;
 
-import static io.github.pocketrice.client.GameRenderer.loadModel;
-import static io.github.pocketrice.client.SchuGame.audiobox;
-import static io.github.pocketrice.client.SchuGame.fontbook;
-import static io.github.pocketrice.shared.AnsiCode.*;
+import static io.github.pocketrice.shared.AnsiCode.ANSI_PURPLE;
+import static io.github.pocketrice.shared.AnsiCode.ANSI_RESET;
 
 public class MenuScreen extends ScreenAdapter {
-    static final Model PANO_MODEL = loadModel(Gdx.files.internal("models/schupano.obj"));
+    Audiobox audiobox;
+    Fontbook fontbook;
     SpriteBatch sprBatch;
     ModelBatch modelBatch;
     OrthographicCamera ocam;
@@ -44,15 +45,21 @@ public class MenuScreen extends ScreenAdapter {
     Environment env;
     ModelInstance panoMi;
     SchuGame game;
+    SchuAssetManager amgr;
 
-    LinkInterlerper<Float, Object[]> interlerpTitleFade;
-    LinkInterlerper<Float, Object[]> interlerpMenuFade;
+    LinkInterlerper<Float, BatchGroup> interlerpTitleFade;
+    LinkInterlerper<Float, BatchGroup> interlerpMenuFade;
 
     List<SchuMenuButton> schubs;
     Table matchlistBtns;
     boolean isUILoaded; // TEMP
 
     public MenuScreen(SchuGame sg) {
+        game = sg;
+        amgr = sg.getAmgr();
+        audiobox = amgr.getAudiobox();
+        fontbook = amgr.getFontbook();
+
         sprBatch = new SpriteBatch();
         modelBatch = new ModelBatch();
         ocam = new OrthographicCamera();
@@ -63,20 +70,18 @@ public class MenuScreen extends ScreenAdapter {
         pcam.far = 50f;
         pcam.update();
 
-        panoMi = new ModelInstance(PANO_MODEL);
+        panoMi = new ModelInstance(amgr.aliasedGet("modelPano", Model.class));
         env = new Environment();
         env.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.5f, 0.5f, 0.7f, 0.4f));
         env.add(new DirectionalLight().set(0.6f, 0.3f, 1.1f, 1f, -0.5f, 0f));
         env.add(new DirectionalLight().set(0.8f, 0.3f, 0.4f, 0f, 0.5f, 0f));
 
         fontbook.bind(sprBatch);
-        game = sg;
-        stage = new Stage();
 
         matchlistBtns = new Table().left();
         matchlistBtns.setPosition(70, 520);
+        stage = new Stage();
         stage.addActor(matchlistBtns);
-
 
         Gdx.input.setInputProcessor(stage);
         isUILoaded = false;
@@ -88,6 +93,7 @@ public class MenuScreen extends ScreenAdapter {
         modelBatch.dispose();
     }
 
+
     @Override
     public void render(float delta) {
         Gdx.gl.glClearColor(0, 0f, 0, 1);
@@ -96,7 +102,6 @@ public class MenuScreen extends ScreenAdapter {
         modelBatch.begin(pcam);
         modelBatch.render(panoMi, env);
         modelBatch.end();
-
         sprBatch.begin();
         fontbook.draw("tinyislanders", 40, "Select a match...", new Vector2(50,700));
         if (game.getGmgr().getMatchlist() == null) { // todo: only request once
@@ -104,7 +109,7 @@ public class MenuScreen extends ScreenAdapter {
         } else {
             if (!isUILoaded) {
                 schubs = Arrays.stream(game.getGmgr().getMatchlist())
-                        .map(m -> new SchuMenuButton(game.getGmgr(), m, SchuButton.generateStyle("koholint", Color.valueOf("#afafdd"), 21)))
+                        .map(m -> new SchuMenuButton( m, SchuButton.generateStyle("koholint", Color.valueOf("#afafdd"), 21), game.getGmgr(), amgr))
                         .toList();
 
                 schubs.forEach(schub -> {
@@ -120,11 +125,7 @@ public class MenuScreen extends ScreenAdapter {
             }
         }
         if (isUILoaded) {
-            schubs.forEach((schub) -> {
-                schub.getInterlerpColor().step();
-                schub.getInterlerpFontSize().step();
-                schub.getInterlerpLabelOpacity().step();
-            });
+            schubs.forEach(SchuButton::step);
         }
 
         matchlistBtns.draw(sprBatch, 1f);

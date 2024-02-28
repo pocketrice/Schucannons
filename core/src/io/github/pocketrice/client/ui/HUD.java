@@ -11,7 +11,6 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle;
-import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import io.github.pocketrice.client.*;
 import io.github.pocketrice.client.Match.PhaseType;
@@ -23,12 +22,14 @@ import org.javatuples.Pair;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.function.Consumer;
 
 import static io.github.pocketrice.client.GameManager.MATCH_START_MAX_DELAY_SEC;
 import static io.github.pocketrice.client.Match.truncVec;
 import static io.github.pocketrice.client.Match.truncate;
-import static io.github.pocketrice.client.SchuGame.*;
+import static io.github.pocketrice.client.SchuGame.VIEWPORT_HEIGHT;
+import static io.github.pocketrice.client.SchuGame.VIEWPORT_WIDTH;
 
 // The HUD should contain dynamic things (options, popups, etc) but also persistent metrics. This is to be able to dynamically move things around.
 public class HUD {
@@ -36,28 +37,43 @@ public class HUD {
         SpriteBatch batch = ((Pair<?, SpriteBatch>) obj).getValue1();
         if (!batch.isDrawing()) batch.begin();
     };
-    public static final Skin DEFAULT_SKIN = new Skin(Gdx.files.internal("skins/onett/skin/terra-mother-ui.json"));
 
+    private Audiobox audiobox;
+    private Fontbook fontbook;
     private GameManager gmgr;
+    private SchuAssetManager amgr;
     private GameRenderer grdr;
+    @Getter
+    private Stage stage;
     private SpriteBatch batch;
+    private BatchGroup batchGroup;
     private TextureAtlas mainSheet;
+
+
     private Sprite sprFlourish;
     private Label labelTime, labelMatchInfo, labelTheta, labelMag, labelMoveLim;
     private Table sidebar;
-    @Getter
-    private Stage stage;
+
+
     private ChainInterlerper phaseStartChInterlerp; // chinter = chain interlerper
     private LinkInterlerper<Float, ? super Pair<Sprite, SpriteBatch>> phaseFlourishInterlerp;
-    private LinkInterlerper<Float, ? super Pair<Label, SpriteBatch>> phaseTextInterlerp;
-    private LinkInterlerper<Integer, ? super Pair<Table[], SpriteBatch>> thetaMagPosInterlerp;
-
+    private LinkInterlerper<Float, ? super Batchable> phaseTextInterlerp;
+    private LinkInterlerper<Vector2, ? super Batchable> thetaMagPosInterlerp;
     private Interlerper<Float> matchInfoOpacityInterlerp;
     private Interlerper<Integer> matchInfoWaitAnimInterlerp;
 
     public HUD(GameManager gm, GameRenderer gr) {
+        gmgr = gm;
+        amgr = gmgr.getAmgr();
+        grdr = gr;
+
         batch = new SpriteBatch();
+        batchGroup = new BatchGroup();
+
+        audiobox = amgr.getAudiobox();
+        fontbook = amgr.getFontbook();
         fontbook.bind(batch);
+
         loadAssets();
 
         LabelStyle thetaMagPrevStyle = new LabelStyle();
@@ -90,14 +106,15 @@ public class HUD {
         sidebar.add(labelMag).left();
         sidebar.row();
         sidebar.add(thetaSel).pad(10f, 10f, 10f, 10f);
-        sidebar.add(new NumberButton(audiobox, fontbook, true, true, "**°", 90f, 0f, 5f, labelTheta, DEFAULT_SKIN)).pad(10f);
-        sidebar.add(new NumberButton(audiobox, fontbook, false, true, "**°", 90f, 0f, 5f, labelTheta, DEFAULT_SKIN)).pad(10f);
+        sidebar.add(new NumberButton(true, true, "**°", SchuButton.generateStyle("tf2build", Color.WHITE, 35), 90f, 0f, 5f, labelTheta, amgr)).pad(10f);
+        sidebar.add(new NumberButton(false, true, "**°", SchuButton.generateStyle("tf2build", Color.WHITE, 35), 90f, 0f, 5f, labelTheta, amgr)).pad(10f);
         sidebar.row();
         sidebar.add(magSel).pad(10f, 15f, 10f, 15f);
-        sidebar.add(new NumberButton(audiobox, fontbook, true, true, " m/s", 90f, 0f, 3f, labelMag, DEFAULT_SKIN)).pad(10f);
-        sidebar.add(new NumberButton(audiobox, fontbook, false, true, " m/s", 90f, 0f, 3f, labelMag, DEFAULT_SKIN)).pad(10f);
+        sidebar.add(new NumberButton(true, true, " m/s", SchuButton.generateStyle("tf2build", Color.valueOf("#DEDEEE"), 30), 90f, 0f, 3f, labelMag, amgr)).pad(10f);
+        sidebar.add(new NumberButton(false, true, " m/s", SchuButton.generateStyle("tf2build", Color.valueOf("#DEDEEE"), 30), 90f, 0f, 3f, labelMag, amgr)).pad(10f);
         sidebar.row();
-        sidebar.add(new SchuButton())
+        sidebar.add(new SchuButton("FIRE IN THE HOLE!", SchuButton.generateStyle("carat", Color.valueOf("#B48EAD"), 45), amgr)
+                .activeFunc((objs) -> System.out.println("192.168.1.64")));
 
         stage = new Stage();
         stage.addActor(sidebar);
@@ -138,77 +155,36 @@ public class HUD {
 
 
         phaseTextInterlerp = new LinkInterlerper<>(0f, 1f, EasingFunction.EASE_IN_OUT_SINE, 0.01)
-                .linkObj(Pair.with(labelTime, batch))
+                .linkObj(labelTime)
                 .linkFunc((t, obj) -> {
-                    Pair<Label, SpriteBatch> batchPair = (Pair) obj;
-                    Label labelTime = batchPair.getValue0();
-                    SpriteBatch batch = batchPair.getValue1();
+                    Label label = (Label) obj;
 
                     float lerpVal = phaseTextInterlerp.interlerp(t, EasingFunction.LINEAR);
-                    labelTime.setColor(labelTime.getColor().r, labelTime.getColor().g, labelTime.getColor().b, lerpVal);
-                    labelTime.setFontScale(1 + (1 - lerpVal));
-                    labelTime.setRotation(30 * (1 - lerpVal));
-
-                    labelTime.draw(batch, 1f);
+                    label.setColor(label.getColor().r, label.getColor().g, label.getColor().b, lerpVal);
+                    label.setFontScale(1 + (1 - lerpVal));
+                    label.setRotation(30 * (1 - lerpVal));
                 })
-                .preFunc(SPRBATCH_FUNC)
-                .postFunc(SPRBATCH_FUNC);
+                .preFunc((obj) -> batchGroup.enable(obj));
 
-        thetaMagPosInterlerp = new LinkInterlerper<>(800, 700, EasingFunction.EASE_OUT_BACK, 0.01)
-                .linkObj(Pair.with(sidebar, batch))
-                .linkFunc((t, obj) -> {
-                    Pair<Table, SpriteBatch> batchPair = (Pair) obj;
-                    Table sb = batchPair.getValue0();
-                    SpriteBatch batch = batchPair.getValue1();
-
-                    int lerpVal = thetaMagPosInterlerp.interlerp(t, EasingFunction.LINEAR);
-                    sb.setX(lerpVal);
-                    sb.draw(batch, 1f);
-                })
-                .preFunc(SPRBATCH_FUNC)
-                .postFunc(SPRBATCH_FUNC);
+        thetaMagPosInterlerp = LinkInterlerper.generatePosTransition(new Batchable(sidebar), new Vector2(sidebar.getY(), 800), new Vector2(sidebar.getY(), 700), EasingFunction.EASE_OUT_BACK, 0.01)
+                .preFunc((obj) -> batchGroup.enable(obj));
 
 
         phaseStartChInterlerp.addSublerp(1f, new ChainKeyframe(phaseFlourishInterlerp, (obj) -> {
             Pair<Sprite, SpriteBatch> batchPair = (Pair) obj;
             Sprite spr = batchPair.getValue0();
             SpriteBatch batch = batchPair.getValue1();
-            Texture sprTexture = spr.getTexture();
 
-            batch.draw(
-                    sprTexture,
-                    spr.getX(),
-                    spr.getY(),
-                    sprTexture.getWidth(),
-                    sprTexture.getHeight(),
-                    sprTexture.getWidth(),
-                    sprTexture.getHeight(),
-                    spr.getScaleX(),
-                    spr.getScaleY(),
-                    spr.getRotation(),
-                    spr.getRegionX(),
-                    spr.getRegionY(),
-                    spr.getRegionWidth(),
-                    spr.getRegionHeight(),
-                    false,
-                    false);
+            spr.draw(batch);
         }));
 
-        phaseStartChInterlerp.addSublerp(2f, new ChainKeyframe<>(phaseTextInterlerp, (obj) -> {
-            Pair<Label, SpriteBatch> pair = ChainKeyframe.extractPair(obj);
-            pair.getValue0().draw(pair.getValue1(), 1f);
-        }));
-
-        phaseStartChInterlerp.addSublerp(2f, new ChainKeyframe<>(thetaMagPosInterlerp, (obj) -> {
-            Pair<Table, SpriteBatch> pair = ChainKeyframe.extractPair(obj);
-            pair.getValue0().draw(pair.getValue1(), 1f);
-        }));
+        phaseStartChInterlerp.addSublerp(2f, new ChainKeyframe<>(phaseTextInterlerp));
+        phaseStartChInterlerp.addSublerp(2f, new ChainKeyframe<>(thetaMagPosInterlerp));
+        batchGroup.add(phaseStartChInterlerp, false);
 
         matchInfoOpacityInterlerp = new Interlerper<>(1f, 0f, EasingFunction.EASE_IN_OUT_CUBIC, 0.0025);
         matchInfoWaitAnimInterlerp = new Interlerper<>(0, 4, EasingFunction.LINEAR, 0.005);
         matchInfoWaitAnimInterlerp.setLooping(true);
-        gmgr = gm;
-        grdr = gr;
     }
 
     public void render() {
@@ -231,14 +207,16 @@ public class HUD {
                 case MOVE -> {
                     labelMoveLim.setText(truncVec(gmgr.getClient().getSelf().getPos(), 2) + " m remaining [fix]");
                     labelMoveLim.draw(batch, 1f);
-                    phaseStartChInterlerp.apply(deltaTime, 0.02);
+                    if (!batchGroup.isEnabled(phaseStartChInterlerp)) batchGroup.enable(phaseStartChInterlerp);
+                    phaseStartChInterlerp.step(deltaTime, 0.02);
 
 //                if (remainingSec < 3) {
 //                    phaseStartChinter.
 //                }
                 }
                 case PROMPT, SIM -> {
-                    phaseStartChInterlerp.apply(deltaTime, 0.02);
+                    if (!batchGroup.isEnabled(phaseStartChInterlerp)) batchGroup.enable(phaseStartChInterlerp);
+                    phaseStartChInterlerp.step(deltaTime, 0.02);
                     labelTime.setText(remainingSec / 60 + ":" + ((remainingSec % 60 < 10) ? "0" : "") + remainingSec % 60);
                 }
             }
@@ -256,18 +234,21 @@ public class HUD {
 
         if (gmgr.getJoinInstant() != null) {
             labelMatchInfo.setText("Waiting for players" + ".".repeat(matchInfoWaitAnimInterlerp.advance()));
-            labelMatchInfo.draw(batch, 1f);
+            batchGroup.enable(labelMatchInfo);
         }
         else if (gmgr.getStartInstant() != null && ChronoUnit.SECONDS.between(gmgr.getStartInstant(), Instant.now()) < MATCH_START_MAX_DELAY_SEC) {
             int startDelaySec = MATCH_START_MAX_DELAY_SEC - (int) ChronoUnit.SECONDS.between(gmgr.getStartInstant(), Instant.now());
             labelMatchInfo.setText("Players ready. Match starts in " + startDelaySec / 60 + ":" + ((startDelaySec % 60 < 10) ? "0" : "") + startDelaySec % 60);
-            labelMatchInfo.draw(batch, 1f);
+            batchGroup.enable(labelMatchInfo);
         }
         else if (gmgr.getStartInstant() != null){
             labelMatchInfo.setText("Match starting!");
             Color lmiColor = labelMatchInfo.getColor();
             labelMatchInfo.setColor(lmiColor.r, lmiColor.b, lmiColor.g, matchInfoOpacityInterlerp.advance());
-            labelMatchInfo.draw(batch, 1f);
+            batchGroup.enable(labelMatchInfo);
+        }
+        else {
+            batchGroup.enable(labelMatchInfo);
         }
 
         if (gmgr.getGame().isDebug()) {
@@ -289,6 +270,7 @@ public class HUD {
             fontbook.formatDraw("mem: " + truncate((Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1E6f, 2) + "mb / " + truncate(Runtime.getRuntime().totalMemory() / 1E6f, 2) + "mb", new Vector2(30, 680));
         }
 
+        batchGroup.draw(batch);
         batch.end();
         stage.act();
     }
@@ -302,7 +284,7 @@ public class HUD {
     }
 
     public void loadAssets() {
-        mainSheet = new TextureAtlas(Gdx.files.internal("textures/main.atlas"));
+        mainSheet = amgr.aliasedGet("mainAtlas", TextureAtlas.class);
         sprFlourish = mainSheet.createSprite("flourish");
         sprFlourish.setRotation(11f);
         sprFlourish.setPosition(-770, 550); // oi mate, bloody magic nums evrywhere?? you are hereby not a programmer anymore >:((
@@ -317,6 +299,7 @@ public class HUD {
         labelStyleMi.font = fontbook.getSizedBitmap("tinyislanders", 25, Color.valueOf("#DFE6D15F"));
         labelMatchInfo = new Label("...", labelStyleMi);
         labelMatchInfo.setPosition(30, 780);
+        batchGroup.addAll(List.of(labelTime, labelMatchInfo), false);
     }
 
     public void dispose() {

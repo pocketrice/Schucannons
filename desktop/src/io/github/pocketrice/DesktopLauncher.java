@@ -15,7 +15,7 @@ public class DesktopLauncher {
 		config.setIdleFPS(30);
 		config.setTitle("Schucannons");
 		config.setBackBufferConfig(8,8,8,8, 24, 0, 4);
-//		config.setHdpiMode(HdpiMode.Pixels);
+		//config.setHdpiMode(HdpiMode.Pixels);
 		config.setWindowedMode(VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 		config.setResizable(false);
 		new Lwjgl3Application(new SchuGame(), config);

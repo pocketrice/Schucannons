@@ -5,31 +5,41 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Cursor;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import io.github.pocketrice.client.Audiobox;
+import io.github.pocketrice.client.Fontbook;
+import io.github.pocketrice.client.SchuAssetManager;
 import io.github.pocketrice.shared.LinkInterlerper;
 import lombok.Getter;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 
-import static io.github.pocketrice.client.SchuGame.audiobox;
-import static io.github.pocketrice.client.SchuGame.fontbook;
-import static io.github.pocketrice.client.ui.HUD.DEFAULT_SKIN;
-
 // All-purpose UI button
 public class SchuButton extends TextButton {
+    SchuAssetManager amgr;
+    Audiobox audiobox;
+    Fontbook fontbook;
+
     @Getter
     Set<LinkInterlerper> interlerps;
     Consumer<List<Object>> activeFunc;
     List<Object> activeObjs;
 
-    public SchuButton(String text, TextButtonStyle tbs) {
-        super(text.split("\\|")[1], DEFAULT_SKIN);
+    public SchuButton(String text, TextButtonStyle tbs, SchuAssetManager am) {
+        super(text, am.get("skins/onett/skin/terra-mother-ui.json", Skin.class));
+
+        amgr = am;
+        audiobox = amgr.getAudiobox();
+        fontbook = amgr.getFontbook();
         this.setHeight(50);
         this.setStyle(tbs);
 
+        interlerps = new HashSet<>();
         for (LinkInterlerper lil : interlerps) {
             lil.setInterlerp(false);
         }
@@ -87,9 +97,13 @@ public class SchuButton extends TextButton {
         return this;
     }
 
+    public void step() {
+        interlerps.forEach(LinkInterlerper::step);
+    }
+
     public static TextButtonStyle generateStyle(String font, Color color, int fs) {
         TextButtonStyle tbs = new TextButtonStyle();
-        tbs.font = fontbook.getSizedBitmap(font, fs);
+        tbs.font = Fontbook.quickFont(font, fs);
         tbs.fontColor = color;
 
         return tbs;
