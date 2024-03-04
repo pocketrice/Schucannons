@@ -20,6 +20,7 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
+import static io.github.pocketrice.server.GameSimulator.MOVE_PHASE_MAX_DIST;
 import static io.github.pocketrice.server.GameSimulator.PROMPT_PHASE_SEC;
 
 public class DedicatedServer extends GameServer {
@@ -131,7 +132,7 @@ public class DedicatedServer extends GameServer {
 
                             case "GC_start" -> {
                                 logInfo("Pushing phase request!");
-                                sendToMatch(UUID.fromString((String) rq.getPayload()), new Response("GS_movePhase", "" + PROMPT_PHASE_SEC));
+                                sendToMatch(UUID.fromString((String) rq.getPayload()), new Response("GS_movePhase", PROMPT_PHASE_SEC + "|" + MOVE_PHASE_MAX_DIST));
                             }
 
                             case "GC_fillMatch" -> {

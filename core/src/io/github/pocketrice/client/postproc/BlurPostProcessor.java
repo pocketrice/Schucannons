@@ -1,4 +1,4 @@
-package io.github.pocketrice.client.render;
+package io.github.pocketrice.client.postproc;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL30;

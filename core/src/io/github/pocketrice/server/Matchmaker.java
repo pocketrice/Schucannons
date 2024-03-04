@@ -1,7 +1,8 @@
 package io.github.pocketrice.server;
 
-import com.github.javafaker.Faker;
 import io.github.pocketrice.client.BotPlayer;
+import io.github.pocketrice.client.Flavour;
+import io.github.pocketrice.client.Flavour.FlavourType;
 import io.github.pocketrice.client.Match;
 import io.github.pocketrice.client.Player;
 
@@ -30,7 +31,7 @@ public class Matchmaker {
                    startMatches[i].addPlayers(new BotPlayer());
            }
 
-           startMatches[i].setMatchName(Faker.instance().food().spice().replaceAll("(China |Chinese |Chinese 5 |Mexican |Self Adhesive |Thai )", "").split(" ")[0] + " " + Faker.instance().hobbit().character().replaceAll("(The |Great )", "").split(" ")[0]); // insert obligatory commentary on blasé unfairness w/ titles and nobles, blah blah...
+           startMatches[i].setMatchName(Flavour.random(FlavourType.HOBBIT, FlavourType.SPICE)); // insert obligatory commentary on blasé unfairness w/ titles and nobles, blah blah...
        }
        matches = new ArrayList<>();
 

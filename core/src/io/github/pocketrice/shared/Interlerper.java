@@ -47,13 +47,11 @@ public class Interlerper<T> {
     public T interlerp(double t, EasingFunction easing) {
         T result = null;
 
-        if (startVal instanceof Integer) {
-            int startNum = (Integer) startVal;
+        if (startVal instanceof Integer startNum) {
             int endNum = (Integer) endVal;
             result = (T) (Integer) ((Double) (startNum + easing.apply(t) * (endNum - startNum))).intValue(); // what black magic is this??
         }
-        else if (startVal instanceof Float) {
-            float startNum = (float) startVal;
+        else if (startVal instanceof Float startNum) {
             float endNum = (float) endVal;
             result = (T) (Float) ((Double) (startNum + easing.apply(t) * (endNum - startNum))).floatValue();
         }
@@ -75,8 +73,8 @@ public class Interlerper<T> {
             Vector3 endVec3 = (Vector3) endVal;
             result = (T) new Vector3(startVec3.x + (float) easing.apply(t) * (endVec3.x - startVec3.x), startVec3.y + (float) easing.apply(t) * (endVec3.y - startVec3.y), startVec3.z + (float) easing.apply(t) * (endVec3.z - startVec3.z));
         }
-        else if (startVal instanceof Interlerpable) {
-            result = (T) ((Interlerpable<?>) startVal).interlerp(t);
+        else if (startVal instanceof Interlerpable startLerp) {
+            result = (T) startLerp.interlerp(t);
         }
 
         return result;

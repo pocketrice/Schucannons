@@ -2,9 +2,11 @@ package io.github.pocketrice.client;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Vector3;
+import io.github.pocketrice.client.Flavour.FlavourType;
 import lombok.Getter;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.DoubleStream;
@@ -22,7 +24,7 @@ public class BotPlayer extends Player {
     }
 
     public BotPlayer(int d, boolean dummy) {
-        this(UUID.randomUUID(), weightedRandom(new String[]{"Notbot", "Anna", "Heavy Weapons Guy", "Woz", "Jobim", "Jianyao", "Wil", "Mundy", "Lando", "Vinny", "Shogo", "Jar", "Isa", "Jeroo", "Ado", "Hal", "Mark", "Bird", "Onuki", "Minton", "Lorry", "Carton", "Gilbert", "The Legend", "Luya", "Hubert", "Schudawg"}, new double[0], true), d, dummy);
+        this(UUID.randomUUID(), Flavour.random(FlavourType.BOT), d, dummy);
     }
 
     public BotPlayer(UUID pid, String name, int d, boolean dummy) {
@@ -65,6 +67,13 @@ public class BotPlayer extends Player {
         return "BOT " + (playerName.isEmpty() ? playerId : playerName);
     }
 
+    public static <T> T weightedRandom(T[] choices) {
+        return weightedRandom(choices, new double[0], true);
+    }
+
+    public static <E> E weightedRandom(Collection<E> choices) {
+        return (E) weightedRandom(choices.toArray());
+    }
     public static <T> T weightedRandom(T[] choices, double[] weights, boolean autoEqualize)
     {
         double rng = Math.random();

@@ -13,7 +13,7 @@ import java.util.UUID;
 
 // Does all the nitty-gritty client stuffs. Unpack server payloads, handle interp...
 public class GameManager {
-    public static final int MATCH_START_MAX_DELAY_SEC = 10;
+    public static final int START_MAX_DELAY = 5;
 
     private Audiobox audiobox;
     private Fontbook fontbook;
@@ -22,7 +22,7 @@ public class GameManager {
     @Getter
     private SchuAssetManager amgr;
     @Setter
-    private volatile GameRenderer grdr;
+    private GameRenderer grdr;
     @Getter
     private SchuGame game;
     private Match match; // This is a local-only compilation of ServerPayloads — for ease of storage.
@@ -80,12 +80,9 @@ public class GameManager {
         decompilePayload((ServerPayload) payload);
 
         // Wait for assets/GameRenderer to be completely loaded. Notice that client/server communication is done prior to waiting.
-        // FIXME TODO URGENT README IMPORTANT NEED TO MOVE THIS OUT OF MAIN THREAD!!!!!!!
-        while (grdr == null) {
-            Thread.onSpinWait();
+        if (grdr != null) {
+            grdr.update();
         }
-
-        grdr.update();
     }
 
     public void receivePlayerList(Object payload) {

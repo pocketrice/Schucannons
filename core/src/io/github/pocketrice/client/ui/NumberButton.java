@@ -1,12 +1,12 @@
 package io.github.pocketrice.client.ui;
 
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
-import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import io.github.pocketrice.client.SchuAssetManager;
 import io.github.pocketrice.shared.EasingFunction;
 import io.github.pocketrice.shared.LinkInterlerper;
+
+import java.util.List;
 
 public class NumberButton extends SchuButton {
     Label label;
@@ -19,10 +19,9 @@ public class NumberButton extends SchuButton {
         this(true, true, s, tbs, 9, 0, 1, l, am);
     }
     public NumberButton(boolean isIncr, boolean isWrap, String s, TextButtonStyle tbs, float upper, float lower, float ss, Label l, SchuAssetManager am) {
-        super((isIncr) ? "+" : "-", tbs, am);
+        super((isIncr) ? "+" : "-", tbs, (isIncr) ? "slide_up" : "slide_down", "", "", "", 0, 0, am);
         amgr = am;
 
-        this.setHeight(100);
         value = 0f;
         isIncrement = isIncr;
         isWrapping = isWrap;
@@ -47,27 +46,22 @@ public class NumberButton extends SchuButton {
 
         interlerps.add(interlerpButtonSize);
         interlerps.add(LinkInterlerper.generateColorTransition(new Batchable(this), Color.valueOf("#afafdd"), Color.valueOf("#e2e5f3"), EasingFunction.EASE_IN_OUT_SINE, 0.04));
+        activeObjs = List.of(label);
+        activeFunc = (objs) -> {
+            Label label = (Label) objs.get(0);
+            value = Float.parseFloat(revertSuffix(String.valueOf(label.getText()), suffix));
 
-        this.addListener(new ClickListener() {
-            @Override
-            public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
-                value = Float.parseFloat(revertSuffix(String.valueOf(label.getText()), suffix));
-                if (button == com.badlogic.gdx.Input.Buttons.LEFT) {
-                    audiobox.playSfx((isIncrement) ? "slide_up" : "slide_down", 100f);
-                }
-
-                float newVal;
-                if (isIncrement) {
-                    newVal = (value == upperBound) ? lowerBound : value + stepSize;  // "extra" wrap since clampWrap() can't account for relative
-                } else {
-                    newVal = (value == lowerBound) ? upperBound : value - stepSize; // same bestie
-                }
-
-                value = (isWrapping) ? clampWrap(lowerBound, upperBound, newVal) : clamp(lowerBound, upperBound, newVal);
-
-                label.setText(applySuffix(value, suffix));
+            float newVal;
+            if (isIncrement) {
+                newVal = (value == upperBound) ? lowerBound : value + stepSize;  // "extra" wrap since clampWrap() can't account for relative
+            } else {
+                newVal = (value == lowerBound) ? upperBound : value - stepSize; // same bestie
             }
-        });
+
+            value = (isWrapping) ? clampWrap(lowerBound, upperBound, newVal) : clamp(lowerBound, upperBound, newVal);
+
+            label.setText(applySuffix(value, suffix));
+        };
     }
 
     public static String applySuffix(float value, String suffix) {

@@ -9,6 +9,7 @@ import io.github.pocketrice.client.GameManager;
 import io.github.pocketrice.client.SchuAssetManager;
 import io.github.pocketrice.client.SchuGame;
 import io.github.pocketrice.client.screens.LoadScreen;
+import io.github.pocketrice.client.ui.Batchable.InterlerpPreset;
 import io.github.pocketrice.shared.EasingFunction;
 import io.github.pocketrice.shared.LinkInterlerper;
 import lombok.Getter;
@@ -26,13 +27,20 @@ public class SchuMenuButton extends SchuButton {
 
         LabelStyle styleLabelPeek = new LabelStyle(); // Anonymous labels are used.
         styleLabelPeek.font = fontbook.getSizedBitmap("koholint", 20);
-        styleLabelPeek.fontColor = Color.valueOf("#e7bbe5");
+        styleLabelPeek.fontColor = Color.valueOf("#e7bbe5bf");
         String[] matchInfo = text.split("\\|");
         labelMatchPeek = new Label(matchInfo[2] + " (" + matchInfo[3] + ")", styleLabelPeek);
+        Batchable baMatchPeek = new Batchable(labelMatchPeek);
 
-        interlerps.add(LinkInterlerper.generateFontTransition(this, 21, 24, EasingFunction.EASE_IN_OUT_SINE, 0.04));
-        interlerps.add(LinkInterlerper.generateOpacityTransition(new Batchable(labelMatchPeek), 0f, 1f, EasingFunction.EASE_IN_OUT_SINE, 0.04));
-        interlerps.add(LinkInterlerper.generateColorTransition(new Batchable(this), Color.valueOf("#afafdd"), Color.valueOf("#e2e5f3"), EasingFunction.EASE_IN_OUT_SINE, 0.04));
+        try {
+            baMatchPeek.opacity(0f); // Force opacity to 0. Note that label.setColor() can't work b/c that forces absolute opacity, and Batchable relies on relative opacities.
+        } catch (BatchableException e) {
+            throw new RuntimeException(e);
+        }
+
+        bindInterlerp(1f, 1.075f, InterlerpPreset.SCALE, EasingFunction.EASE_IN_OUT_QUINTIC, 0.04);
+        bindInterlerp(Color.valueOf("#afafdd"), Color.valueOf("#e2e5f3"), InterlerpPreset.COLOR, EasingFunction.EASE_IN_OUT_SINE, 0.04);
+        bindInterlerp(LinkInterlerper.generateOpacityTransition(baMatchPeek, 0f, 1f, EasingFunction.EASE_IN_OUT_SINE, 0.04));
 
         interlerps.forEach(il -> il.setInterlerp(false));
 

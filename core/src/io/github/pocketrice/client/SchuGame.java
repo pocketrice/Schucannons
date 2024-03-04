@@ -47,12 +47,22 @@ public class SchuGame extends Game {
 		amgr.setLoader(SceneAsset.class, ".gltf", new GLTFAssetLoader());
 		amgr.setLoader(SceneAsset.class, ".glb", new GLBAssetLoader());
 
-		amgr.setAudiobox(Audiobox.of("aero-seatbelt.ogg", "buttonclick.ogg", "buttonclickrelease.ogg", "buttonrollover.ogg", "combine-radio.ogg", "crit.ogg", "dominate.ogg", "duel_challenge.ogg", "hint.ogg", "hitsound.ogg", "hl2_buttonclickrelease.ogg", "notification_alert.ogg", "panel_close.ogg", "panel_open.ogg", "revenge.ogg", "slide_down.ogg", "slide_up.ogg", "unitisinbound.ogg", "vote_started.ogg", "wpn_select.ogg", "wpn_moveselect.ogg"));
-		amgr.setFontbook(Fontbook.of("99occupy.ttf", "benzin.ttf", "carat.otf", "delfino.ttf", "dina.ttc", "eastseadokdo.ttf", "koholint.ttf", "tf2build.ttf", "tf2segundo.ttf", "tinyislanders.ttf", "kyomadoka.ttf", "sm64.otf", "kurokane.otf"));
+//		amgr.setAudiobox(Audiobox.of("aero-seatbelt.ogg", "buttonclick.ogg", "buttonclickrelease.ogg", "buttonrollover.ogg", "combine-radio.ogg", "crit.ogg", "dominate.ogg", "duel_challenge.ogg", "hint.ogg", "hitsound.ogg", "hl2_buttonclickrelease.ogg", "notification_alert.ogg", "panel_close.ogg", "panel_open.ogg", "revenge.ogg", "slide_down.ogg", "slide_up.ogg", "unitisinbound.ogg", "vote_started.ogg", "wpn_select.ogg", "wpn_moveselect.ogg"));
+//		amgr.setFontbook(Fontbook.of("99occupy.ttf", "benzin.ttf", "carat.otf", "delfino.ttf", "dina.ttc", "eastseadokdo.ttf", "koholint.ttf", "tf2build.ttf", "tf2segundo.ttf", "tinyislanders.ttf", "kyomadoka.ttf", "sm64.otf", "kurokane.otf"));
 		amgr.aliasedLoad("models/schupano.obj", "modelPano", Model.class);
 		amgr.finishLoadingAsset("modelPano");
 		amgr.aliasedLoad("skins/onett/skin/terra-mother-ui.json", "defaultSkin", Skin.class);
 		amgr.finishLoadingAsset("defaultSkin");
+
+		Audiobox ab = new Audiobox();
+		ab.setAmgr(amgr);
+		ab.importAll();
+		amgr.setAudiobox(ab);
+
+		Fontbook fb = new Fontbook();
+		fb.setAmgr(amgr);
+		fb.importAll();
+		amgr.setFontbook(fb);
 
 		gmgr = new GameManager(this);
 

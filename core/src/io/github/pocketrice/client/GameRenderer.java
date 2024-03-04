@@ -6,6 +6,7 @@ import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.*;
+import com.badlogic.gdx.graphics.Cursor.SystemCursor;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g3d.Environment;
 import com.badlogic.gdx.graphics.g3d.Model;
@@ -27,10 +28,10 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.crashinvaders.vfx.VfxManager;
 import com.crashinvaders.vfx.effects.ChainVfxEffect;
 import com.crashinvaders.vfx.effects.FilmGrainEffect;
-import io.github.pocketrice.client.render.BlurPostProcessor;
-import io.github.pocketrice.client.render.effects.AsciiEffect;
-import io.github.pocketrice.client.render.effects.FastDistortEffect;
-import io.github.pocketrice.client.render.effects.HalftoneEffect;
+import io.github.pocketrice.client.postproc.BlurPostProcessor;
+import io.github.pocketrice.client.postproc.effects.AsciiEffect;
+import io.github.pocketrice.client.postproc.effects.FastDistortEffect;
+import io.github.pocketrice.client.postproc.effects.HalftoneEffect;
 import io.github.pocketrice.client.ui.HUD;
 import io.github.pocketrice.shared.Interlerper;
 import lombok.Getter;
@@ -95,7 +96,7 @@ public class GameRenderer {
         envMi = new ModelInstance(amgr.aliasedGet("modelSky", Model.class));
         envMi.transform.scl(2f);
         envMi.transform.rotate(new Quaternion(Vector3.Z, (float) (Math.PI * 2)));
-        projMi = new ModelInstance(amgr.aliasedGet("modelCannonProj", Model.class));
+        projMi = new ModelInstance(amgr.aliasedGet("modelCannonWheel", Model.class));
 
         cannonA = new ModelGroup();
         cannonA.setGroupName("cannonA");
@@ -126,7 +127,7 @@ public class GameRenderer {
         gameCam = new PerspectiveCamera(80, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
         gameCam.position.set(CAMERA_POS);
         gameCam.lookAt(CAMERA_LOOK);
-        gameCam.near = 1f;
+        gameCam.near = 0.3f;
         gameCam.far = 300f;
         gameCam.update();
         inputCic = new CameraInputController(gameCam);
@@ -140,6 +141,7 @@ public class GameRenderer {
                     case Input.Keys.F3 -> {
                         SchuGame game = gmgr.getGame();
                         game.setDebug(!game.isDebug);
+                        Gdx.graphics.setSystemCursor(SystemCursor.Arrow); // To avoid memory cost (of running a tad of code...). Note that cursor is set to NONE if debug is enabled so this is overwritten.
                     }
 
                     case Input.Keys.ESCAPE -> {

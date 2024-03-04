@@ -3,6 +3,7 @@ package io.github.pocketrice.client;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
+import com.badlogic.gdx.files.FileHandle;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,21 +49,43 @@ public class Audiobox {
     }
 
     public void playSfx(String sfx, float volume) {
-        Sound sound = amgr.fuzzyGet(sfx, Sound.class);
-        sound.play(volume * MASTER_VOLUME);
+        if (!sfx.isBlank()) {
+            Sound sound = amgr.fuzzyGet(sfx, Sound.class);
+            sound.play(volume * MASTER_VOLUME);
+        }
     }
 
     public void playBgm(String bgm, float volume) {
-        Music music = amgr.fuzzyGet(bgm, Music.class);
-        music.setLooping(true);
-        music.setVolume(volume * MASTER_VOLUME);
-        music.play();
+        if (!bgm.isBlank()) {
+            Music music = amgr.fuzzyGet(bgm, Music.class);
+            music.setLooping(true);
+            music.setVolume(volume * MASTER_VOLUME);
+            music.play();
+        }
     }
 
     // Should not store assets to collector class since that creates duplicates. Thus, only stores names (""pointers"")
     public void stopBgm(String bgm) {
-       Music music = amgr.fuzzyGet(bgm, Music.class);
-       music.stop();
+        if (!bgm.isBlank()) {
+            Music music = amgr.fuzzyGet(bgm, Music.class);
+            music.stop();
+        }
+    }
+
+    // Assumes all audio are SFX
+    public void importAll() {
+        FileHandle audioDir = Gdx.files.internal("assets/audio/");
+
+        if (audioDir.isDirectory()) {
+            for (FileHandle audio : audioDir.list()) {
+                String filename = audio.name();
+                if (filename.matches("[^*][^*].*(\\.ogg|\\.mp3|\\.wav)")) { // To disable a file, append ** to beginning.
+                    loadAudio(true, filename);
+                }
+            }
+        }
+
+        System.out.println("Loaded all audio from assets/audio!");
     }
 
     public static Audiobox of(String... sfxs) {

@@ -1,6 +1,7 @@
 package io.github.pocketrice.client.ui;
 
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
@@ -14,6 +15,7 @@ import io.github.pocketrice.client.ChainInterlerper;
 import io.github.pocketrice.client.Fontbook;
 import io.github.pocketrice.shared.EasingFunction;
 import io.github.pocketrice.shared.LinkInterlerper;
+import lombok.Getter;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -23,26 +25,27 @@ public class Batchable {
     Object batchObj;
     Set<LinkInterlerper> interlerps;
     Color color;
+    @Getter
     int x, y;
-    float rot, scl;
+    float rot, scl, opacity;
 
     public Batchable(Object obj) {
-        this(obj, 0, 0);
+        if (!isBatchable(obj)) {
+            System.err.println("Type " + obj.getClass().getSimpleName() + " unable to be batchable!");
+        } else {
+            batchObj = (obj instanceof Batchable ba) ? ba.batchObj : obj;
+            interlerps = new HashSet<>();
+            loadPresets();
+        }
     }
 
     public Batchable(Object obj, int x, int y) {
-        if (!isBatchable(obj)) {
-            System.err.println("Type unable to be batchable! (" + obj.getClass().getSimpleName() + ")");
-        } else {
-            batchObj = obj;
-            interlerps = new HashSet<>();
-            loadPresets();
+        this(obj);
 
-            try {
-                this.pos(x, y);
-            } catch (BatchableException e) {
-                System.err.println("Unable to bind object to batchable!");
-            }
+        try {
+            this.pos(x, y);
+        } catch (BatchableException e) {
+            System.err.println("Unable to set batchable " + batchObj + " position!");
         }
     }
 
@@ -51,20 +54,38 @@ public class Batchable {
             throw new IllegalStateException("Batch was not started before drawing!");
         }
 
-       if (batchObj instanceof Sprite) {
-           ((Sprite) batchObj).draw(batch);
+       if (batchObj instanceof Sprite spr) {
+           //spr.draw(batch);
+           Texture sprTexture = spr.getTexture();
+           batch.draw(
+                   sprTexture,
+                   spr.getX(),
+                   spr.getY(),
+                   sprTexture.getWidth(),
+                   sprTexture.getHeight(),
+                   sprTexture.getWidth(),
+                   sprTexture.getHeight(),
+                   spr.getScaleX(),
+                   spr.getScaleY(),
+                   spr.getRotation(),
+                   spr.getRegionX(),
+                   spr.getRegionY(),
+                   spr.getRegionWidth(),
+                   spr.getRegionHeight(),
+                   false,
+                   false);
        }
-       else if (batchObj instanceof Table) {
-           ((Table) batchObj).draw(batch, 1f);
+       else if (batchObj instanceof Table table) {
+           table.draw(batch, 1f);
        }
-       else if (batchObj instanceof Label) {
-           ((Label) batchObj).draw(batch, 1f);
+       else if (batchObj instanceof Label label) {
+           label.draw(batch, 1f);
        }
-       else if (batchObj instanceof Drawable) {
-           ((Drawable) batchObj).draw(batch, x, y, 9999f, 9999f); // stupid code pls fix now
+       else if (batchObj instanceof Drawable drawable) {
+           drawable.draw(batch, x, y, 9999f, 9999f); // stupid code pls fix now
        }
-       else if (batchObj instanceof ChainInterlerper) {
-           ((ChainInterlerper) batchObj).draw(batch);
+       else if (batchObj instanceof ChainInterlerper chint) {
+           chint.draw(batch);
        }
        else {
            throw new BatchableException("Invalid batchable operation!!");
@@ -74,17 +95,26 @@ public class Batchable {
     public Batchable color(Color col) throws BatchableException {
         color = col;
 
-        if (batchObj instanceof Sprite) {
-            ((Sprite) batchObj).setColor(col);
+        if (batchObj instanceof Sprite spr) {
+            spr.setColor(col);
         }
-        else if (batchObj instanceof TextButton) {
-            ((TextButton) batchObj).getStyle().fontColor = col;
+        else if (batchObj instanceof TextButton tb) {
+            tb.getStyle().fontColor = col;
         }
-        else if (batchObj instanceof Table) {
-            ((Table) batchObj).setColor(col);
+        else if (batchObj instanceof Table table) {
+            table.setColor(col);
         }
-        else if (batchObj instanceof Label) {
-            ((Label) batchObj).getStyle().fontColor = col;
+        else if (batchObj instanceof Label label) {
+            label.getStyle().fontColor = col;
+        }
+        else if (batchObj instanceof BatchGroup bg) {
+            bg.forEach(b -> {
+                try {
+                    b.color(col);
+                } catch (BatchableException e) {
+                    throw new RuntimeException(e);
+                }
+            });
         }
         else {
             throw new BatchableException("Invalid batchable operation!!");
@@ -93,22 +123,48 @@ public class Batchable {
         return this;
     }
 
-    public Batchable opacity(float opacity) throws BatchableException {
-        color(color.set(color.r, color.g, color.b, opacity));
+    public Batchable opacity(float o) throws BatchableException { // Cannot do a simple setColor(r, g, b, a * o) b/c of 0 shenanigans
+        opacity = o;
+        Color newColor = new Color(color.r, color.g, color.b, color.a * opacity);
+
+        if (batchObj instanceof Sprite spr) {
+            spr.setColor(newColor);
+        }
+        else if (batchObj instanceof TextButton tb) {
+            tb.getStyle().fontColor = newColor;
+        }
+        else if (batchObj instanceof Table table) {
+            table.setColor(newColor);
+        }
+        else if (batchObj instanceof Label label) {
+            label.getStyle().fontColor = newColor;
+        }
+        else if (batchObj instanceof BatchGroup bg) {
+            bg.forEach(b -> {
+                try {
+                    b.opacity(o);
+                } catch (BatchableException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+        }
+        else {
+            throw new BatchableException("Invalid batchable operation!!");
+        }
+
         return this;
     }
 
     public Batchable fontSize(int fs) throws BatchableException {
-        if (batchObj instanceof TextButton) {
-            TextButtonStyle tbs = ((TextButton) batchObj).getStyle();
+        if (batchObj instanceof TextButton tb) {
+            TextButtonStyle tbs = tb.getStyle();
             tbs.font = Fontbook.quickFont(tbs.font.toString(), fs);
         }
-        else if (batchObj instanceof Label) {
-            LabelStyle ls = ((Label) batchObj).getStyle();
+        else if (batchObj instanceof Label label) {
+            LabelStyle ls = label.getStyle();
             ls.font = Fontbook.quickFont(ls.font.toString(), fs);
         }
-        else if (batchObj instanceof Table) {
-            Table table = (Table) batchObj;
+        else if (batchObj instanceof Table table) {
             Arrays.stream(table.getChildren().toArray()).filter(c -> c instanceof Label || c instanceof TextButton).map(Batchable::new).forEach(tb -> {
                 if (tb.batchObj instanceof Label) {
                     LabelStyle style = ((Label) tb.batchObj).getStyle();
@@ -116,6 +172,15 @@ public class Batchable {
                 } else {
                     TextButtonStyle style = ((TextButton) tb.batchObj).getStyle();
                     style.font = Fontbook.quickFont(style.font.toString(), fs);
+                }
+            });
+        }
+        else if (batchObj instanceof BatchGroup bg) {
+            bg.forEach(b -> {
+                try {
+                    b.fontSize(fs);
+                } catch (BatchableException e) {
+                    throw new RuntimeException(e);
                 }
             });
         }
@@ -127,18 +192,27 @@ public class Batchable {
     }
 
     public Batchable pos(int x, int y) throws BatchableException {
-        if (batchObj instanceof Sprite) {
-            ((Sprite) batchObj).setPosition(x,y);
+        if (batchObj instanceof Sprite spr) {
+            spr.setPosition(x,y);
         }
-        else if (batchObj instanceof Table) {
-            ((Table) batchObj).setPosition(x,y);
+        else if (batchObj instanceof Table table) {
+            table.setPosition(x,y);
         }
-        else if (batchObj instanceof Label) {
-            ((Label) batchObj).setPosition(x,y);
+        else if (batchObj instanceof Label label) {
+            label.setPosition(x,y);
         }
         else if (batchObj instanceof Drawable) {
             this.x = x;
             this.y = y;
+        }
+        else if (batchObj instanceof BatchGroup bg) {
+            bg.forEach(b -> {
+                try {
+                    b.pos(x,y);
+                } catch (BatchableException e) {
+                    throw new RuntimeException(e);
+                }
+            });
         }
         else {
             throw new BatchableException("Invalid batchable operation!!");
@@ -148,14 +222,23 @@ public class Batchable {
     }
 
     public Batchable rot(float r) throws BatchableException {
-        if (batchObj instanceof Sprite) {
-            ((Sprite) batchObj).setRotation(r);
+        if (batchObj instanceof Sprite spr) {
+            spr.setRotation(r);
         }
-        else if (batchObj instanceof Table) {
-            ((Table) batchObj).setRotation(r);
+        else if (batchObj instanceof Table table) {
+            table.setRotation(r);
         }
-        else if (batchObj instanceof Label) {
-            ((Label) batchObj).setRotation(r);
+        else if (batchObj instanceof Label label) {
+            label.setRotation(r);
+        }
+        else if (batchObj instanceof BatchGroup bg) {
+            bg.forEach(b -> {
+                try {
+                    b.rot(r);
+                } catch (BatchableException e) {
+                    throw new RuntimeException(e);
+                }
+            });
         }
         else {
             throw new BatchableException("Invalid batchable operation!");
@@ -165,16 +248,23 @@ public class Batchable {
     }
 
     public Batchable scl(float s) throws BatchableException {
-        if (batchObj instanceof Sprite) {
-            ((Sprite) batchObj).setScale(s);
+        if (batchObj instanceof Sprite spr) {
+            spr.setScale(s);
         }
-        else if (batchObj instanceof Table) {
-            ((Table) batchObj).setScale(s);
+        else if (batchObj instanceof Table table) {
+            table.setScale(s);
         }
-        else if (batchObj instanceof Label) {
-            ((Label) batchObj).setScale(s);
-        }
-        else {
+        else if (batchObj instanceof Label label) {
+            label.setScale(s);
+        } else if (batchObj instanceof BatchGroup bg) {
+            bg.forEach(b -> {
+                try {
+                    b.scl(s);
+                } catch (BatchableException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+        } else {
             throw new BatchableException("Invalid batchable operation!!");
         }
 
@@ -191,15 +281,15 @@ public class Batchable {
             case POSITION -> lil = LinkInterlerper.generatePosTransition(this, (Vector2) v1, (Vector2) v2, easing, ss);
             case ROTATION -> lil = LinkInterlerper.generateRotTransition(this, (float) v1, (float) v2, easing, ss);
             case SCALE -> lil = LinkInterlerper.generateSclTransition(this, (float) v1, (float) v2, easing, ss);
-            case FONT_SIZE -> { // font_size
-                if (batchObj instanceof Label) {
-                    lil = LinkInterlerper.generateFontTransition((Label) batchObj, (int) v1, (int) v2, easing, ss);
-                }
-                else if (batchObj instanceof TextButton) {
-                    lil = LinkInterlerper.generateFontTransition((TextButton) batchObj, (int) v1, (int) v2, easing, ss);
-                }
-                else throw new BatchableException("Invalid batchable operation!!");
-            }
+//            case FONT_SIZE -> { // font_size
+//                if (batchObj instanceof Label) {
+//                    lil = LinkInterlerper.generateFontTransition((Label) batchObj, (int) v1, (int) v2, easing, ss);
+//                }
+//                else if (batchObj instanceof TextButton) {
+//                    lil = LinkInterlerper.generateFontTransition((TextButton) batchObj, (int) v1, (int) v2, easing, ss);
+//                }
+//                else throw new BatchableException("Invalid batchable operation!!");
+//            }
         }
 
         interlerps.add(lil);
@@ -207,47 +297,49 @@ public class Batchable {
     }
 
     public void loadPresets() {
-        if (batchObj instanceof Sprite) {
-            Sprite b = (Sprite) batchObj;
-            color = b.getColor();
-            x = (int) b.getX();
-            y = (int) b.getY();
-            rot = b.getRotation();
-            scl = b.getScaleX();
+        if (batchObj instanceof Sprite spr) {
+            color = spr.getColor();
+            x = (int) spr.getX();
+            y = (int) spr.getY();
+            rot = spr.getRotation();
+            scl = spr.getScaleX();
         }
-        else if (batchObj instanceof TextButton) {
-            TextButton b = (TextButton) batchObj;
-            color = b.getStyle().fontColor;
-            x = (int) b.getX();
-            y = (int) b.getY();
-            rot = b.getRotation();
-            scl = b.getScaleX();
+        else if (batchObj instanceof TextButton tb) {
+            tb.setTransform(true);
+            color = tb.getStyle().fontColor;
+            x = (int) tb.getX();
+            y = (int) tb.getY();
+            rot = tb.getRotation();
+            scl = tb.getScaleX();
+
+            if (batchObj instanceof SchuButton schub) {
+                interlerps.addAll(schub.interlerps);
+            }
         }
-        else if (batchObj instanceof Table) {
-            Table b = (Table) batchObj;
-            color = b.getColor();
-            x = (int) b.getX();
-            y = (int) b.getY();
-            rot = b.getRotation();
-            scl = b.getScaleX();
+        else if (batchObj instanceof Table table) {
+            table.setTransform(true);
+            color = table.getColor();
+            x = (int) table.getX();
+            y = (int) table.getY();
+            rot = table.getRotation();
+            scl = table.getScaleX();
         }
-        else if (batchObj instanceof Label) {
-            Label b = (Label) batchObj;
-            color = b.getStyle().fontColor;
-            x = (int) b.getX();
-            y = (int) b.getY();
-            rot = b.getRotation();
-            scl = b.getScaleX();
+        else if (batchObj instanceof Label label) {
+            color = label.getStyle().fontColor;
+            x = (int) label.getX();
+            y = (int) label.getY();
+            rot = label.getRotation();
+            scl = label.getScaleX();
         }
     }
 
     @Override
-    public boolean equals(Object other) {
-        return (other instanceof Batchable) ? this.batchObj.equals(((Batchable) other).batchObj) : this.batchObj.equals(other);
+    public boolean equals(Object obj) {
+        return (obj instanceof Batchable other) ? this.batchObj.equals(other.batchObj) : this.batchObj.equals(obj);
     }
 
     public static boolean isBatchable(Object obj) {
-        return (obj instanceof Sprite) || (obj instanceof Table) || (obj instanceof Label) || (obj instanceof Drawable) || (obj instanceof ChainInterlerper);
+        return (obj instanceof Sprite || obj instanceof Table || obj instanceof Label || obj instanceof Drawable || obj instanceof ChainInterlerper || obj instanceof Batchable || obj instanceof BatchGroup);
     }
 
     public enum InterlerpPreset {
@@ -255,7 +347,12 @@ public class Batchable {
         OPACITY,
         POSITION,
         ROTATION,
-        SCALE,
-        FONT_SIZE
+        SCALE
+       // FONT_SIZE
+    }
+
+    @Override
+    public String toString() {
+        return "Batchable@" + Integer.toHexString(hashCode()) + "-" + batchObj.toString();
     }
 }

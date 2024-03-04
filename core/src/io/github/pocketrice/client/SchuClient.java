@@ -20,7 +20,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.LinkedList;
 import java.util.UUID;
 
-import static io.github.pocketrice.client.GameManager.MATCH_START_MAX_DELAY_SEC;
+import static io.github.pocketrice.client.GameManager.START_MAX_DELAY;
 
 
 public class SchuClient extends GameClient {
@@ -178,7 +178,7 @@ public class SchuClient extends GameClient {
                 }
 
                 if (gmgr.getStartInstant() != null) {
-                    if (timeSurpassed(gmgr.getStartInstant(), MATCH_START_MAX_DELAY_SEC) && !isMatchStarted) {
+                    if (timeSurpassed(gmgr.getStartInstant(), START_MAX_DELAY) && !isMatchStarted) {
                         isMatchStarted = true;
                         kryoClient.sendTCP(new Request("GC_start", gmgr.getMatchState().getMatchId().toString()));
                     }

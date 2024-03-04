@@ -1,5 +1,5 @@
 main.png
-size: 935, 267
+size: 973, 267
 format: RGBA8888
 filter: Linear,Linear
 repeat: none
@@ -8,5 +8,14 @@ flourish
   xy: 0, 0
   size: 935, 267
   orig: 935, 267
+  offset: 0, 0
+  index: -1
+pokemmo
+  rotate: false
+  xy: 935, 0
+  size: 38, 38
+  split: 12, 13, 12, 13
+  pad: 15, 15, 15, 15
+  orig: 38, 38
   offset: 0, 0
   index: -1

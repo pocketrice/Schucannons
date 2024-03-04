@@ -1,6 +1,7 @@
 package io.github.pocketrice.client;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -25,7 +26,6 @@ public class Fontbook {
     Map<Integer, List<String>> bmfCache;
     @Getter
     Triplet<String, Integer, Color> presetSettings;
-    SpriteBatch presetBatch;
     SchuAssetManager amgr;
 
 
@@ -33,7 +33,6 @@ public class Fontbook {
         ftfCache = new ArrayList<>();
         bmfCache = new TreeMap<>();
         presetSettings = new Triplet<>("tinyislanders", 18, Color.WHITE);
-        presetBatch = null;
     }
 
     public void setAmgr(SchuAssetManager am) {
@@ -64,30 +63,31 @@ public class Fontbook {
         return amgr.get(assetName, BitmapFont.class);
     }
 
+    // .bind is deprecated
 
-    public void draw(String font, int fontSize, CharSequence text, Vector2 loc) {
+    public void draw(String font, int fontSize, CharSequence text, Vector2 loc, SpriteBatch batch) {
         BitmapFont bmf = getSizedBitmap(font, fontSize);
         Color oldCol = bmf.getColor();
         bmf.setColor(presetSettings.getValue2());
-        bmf.draw(presetBatch, text, loc.x, loc.y);
+        bmf.draw(batch, text, loc.x, loc.y);
         bmf.setColor(oldCol);
     }
 
-    public void draw(CharSequence text, Vector2 loc) {
-        draw(presetSettings.getValue0(), presetSettings.getValue1(), text, loc);
+    public void draw(CharSequence text, Vector2 loc, SpriteBatch batch) {
+        draw(presetSettings.getValue0(), presetSettings.getValue1(), text, loc, batch);
     }
 
-    public void formatDraw(String font, int fontSize, Color color, CharSequence text, Vector2 loc) {
+    public void formatDraw(String font, int fontSize, Color color, CharSequence text, Vector2 loc, SpriteBatch batch) {
         BitmapFont bmf = getSizedBitmap(font, fontSize);
 
         Color oldCol = bmf.getColor();
         bmf.setColor(color);
-        bmf.draw(presetBatch, text, loc.x, loc.y);
+        bmf.draw(batch, text, loc.x, loc.y);
         bmf.setColor(oldCol); // Set color back to default
     }
 
-    public void formatDraw(CharSequence text, Vector2 loc) {
-        formatDraw(presetSettings.getValue0(), presetSettings.getValue1(), presetSettings.getValue2(), text, loc);
+    public void formatDraw(CharSequence text, Vector2 loc, SpriteBatch batch) {
+        formatDraw(presetSettings.getValue0(), presetSettings.getValue1(), presetSettings.getValue2(), text, loc, batch);
     }
 
 
@@ -106,16 +106,16 @@ public class Fontbook {
         return this;
     }
 
-    // Terminating branch of builder
-    public void bind(SpriteBatch batch) {
-        presetBatch = batch;
-    }
+//    // Terminating branch of builder — deprecated since one single Fontbook is now shared.
+//    public void bind(SpriteBatch batch) {
+//        presetBatch = batch;
+//    }
 
     // Validate file and add to validated fonts list. Cannot precache them due to stupid AssetManager shenanigans >:(
     public void loadFont(String alias) {
         String fontFile = (alias.matches(".*\\.[a-z0-9]+") ? alias : amgr.fzf(alias)[0]); // Default to ttf
         if (!Gdx.files.internal("fonts/" + fontFile).exists()) System.err.println("Warning: " + fontFile + " does not exist.");
-        if (!fontFile.matches(".*(\\.ttf|\\.ttc)")) System.err.println("Warning: " + fontFile + " is not .ttf format. Likely will not load.");
+        if (!fontFile.matches(".*(\\.ttf|\\.ttc|\\.otf)")) System.err.println("Warning: " + fontFile + " is not .ttf/.ttc/.otf format. Likely will not load.");
 
         if (!amgr.isLoaded("fonts/" + fontFile)) {
             amgr.aliasedLoad("fonts/" + fontFile, alias, FreeTypeFontGenerator.class);
@@ -131,13 +131,28 @@ public class Fontbook {
     }
 
     public void dispose() {
-        ftfCache.forEach(s -> amgr.unload("fonts/" + s + ".ttf"));
+        ftfCache.forEach(s -> amgr.unload("/fonts/" + s + ".ttf"));
         for (int i : bmfCache.keySet()) {
-            bmfCache.get(i).forEach(b -> amgr.unload("fonts/" + b + i + ".ttf"));
+            bmfCache.get(i).forEach(b -> amgr.unload("/fonts/" + b + i + ".ttf"));
         }
 
         ftfCache.clear();
         bmfCache.clear();
+    }
+
+    public void importAll() {
+        FileHandle fontDir = Gdx.files.internal("assets/fonts/");
+
+        if (fontDir.isDirectory()) {
+            for (FileHandle font : fontDir.list()) {
+                String filename = font.name();
+                if (filename.matches("[^*][^*].*(\\.ttc|\\.ttf|\\.otf)")) { // To disable a file, append ** to beginning.
+                    loadFont(filename);
+                }
+            }
+        }
+
+        System.out.println("Loaded all fonts from assets/fonts!");
     }
 
     public static Fontbook of(String... fontFiles) {
@@ -149,7 +164,7 @@ public class Fontbook {
     }
 
     public static BitmapFont quickFont(String font, int fontSize) {
-        Fontbook fb = Fontbook.of(font);
+        Fontbook fb = getGlobalAmgr().getFontbook();
 
         return fb.getSizedBitmap(font, fontSize);
     }

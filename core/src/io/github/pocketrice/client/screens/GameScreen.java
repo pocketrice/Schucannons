@@ -8,7 +8,6 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Stage;
-import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import io.github.pocketrice.client.*;
 import io.github.pocketrice.client.ui.BatchGroup;
 import io.github.pocketrice.client.ui.Batchable;
@@ -34,7 +33,7 @@ public class GameScreen extends ScreenAdapter {
     @Setter
     private boolean isPromptReady; // terrible
 
-    public GameScreen( GameManager gm, GameRenderer gr) throws BatchableException {
+    public GameScreen(GameManager gm, GameRenderer gr) throws BatchableException {
         batch = new SpriteBatch();
         batchGroup = new BatchGroup();
         camera = new OrthographicCamera();
@@ -44,9 +43,9 @@ public class GameScreen extends ScreenAdapter {
         grdr = gr;
         audiobox = amgr.getAudiobox();
         fontbook = amgr.getFontbook();
-        fontbook.bind(batch);
+        //fontbook.bind(batch);
 
-        TextButton btnStart = new SchuButton("TO WAR!", SchuButton.generateStyle("tf2build", Color.WHITE, 60), amgr)
+        SchuButton btnStart = new SchuButton("TO WAR!", SchuButton.generateStyle("tf2build", Color.valueOf("#B8B0CF"), 60), amgr)
                 .activeObjs(List.of(gmgr, this))
                 .activeFunc((objs) -> {
                     GameManager gman = (GameManager) objs.get(0);
@@ -58,10 +57,14 @@ public class GameScreen extends ScreenAdapter {
                     gsc.finishPrompt();
                 });
 
+        btnStart.bindInterlerp(1f, 1.1f, InterlerpPreset.SCALE, EasingFunction.EASE_IN_OUT_QUARTIC, 0.04);
+        btnStart.bindInterlerp(0f,1.5f, InterlerpPreset.ROTATION, EasingFunction.EASE_IN_OUT_CIRCULAR, 0.04);
+        btnStart.bindInterlerp(Color.valueOf("#B8B0CF"), Color.valueOf("#FEFCFF"), InterlerpPreset.COLOR, EasingFunction.EASE_IN_OUT_SINE, 0.04);
+
         batchGroup.add(new Batchable(btnStart)
-                .pos((int) (Gdx.graphics.getWidth() / 2f - 30f), (int) (Gdx.graphics.getHeight() / 2f - 90f))
-                .bindInterlerp(45, 50, InterlerpPreset.FONT_SIZE, EasingFunction.EASE_IN_OUT_SINE, 0.04)
-                .bindInterlerp(Color.valueOf("#afafdd"), Color.valueOf("#e2e5f3"), InterlerpPreset.COLOR, EasingFunction.EASE_IN_OUT_SINE, 0.04));
+                .pos((int) (Gdx.graphics.getWidth() / 2f - 30f), (int) (Gdx.graphics.getHeight() / 2f - 60f)));
+//                .bindInterlerp(45, 50, InterlerpPreset.FONT_SIZE, EasingFunction.EASE_IN_OUT_SINE, 0.04)
+//                .bindInterlerp(Color.valueOf("#afafdd"), Color.valueOf("#e2e5f3"), InterlerpPreset.COLOR, EasingFunction.EASE_IN_OUT_SINE, 0.04), true);
 
         stage = new Stage();
         stage.addActor(btnStart);
@@ -82,11 +85,11 @@ public class GameScreen extends ScreenAdapter {
         if (isPromptReady) {
             if (!grdr.isPromptBlur()) {
                 grdr.setPromptBlur(true);
-                fontbook.font("tf2segundo").fontColor(Color.valueOf("#a2a0ddc0")).fontSize(40);
             }
 
             batch.begin();
-            fontbook.draw("All ready?", new Vector2(Gdx.graphics.getWidth() / 2f - 70f, Gdx.graphics.getHeight() / 2f + 70f));
+            fontbook.font("tf2segundo").fontColor(Color.valueOf("#a2a0ddc0")).fontSize(40);
+            fontbook.draw("All ready?", new Vector2(Gdx.graphics.getWidth() / 2f - 80f, Gdx.graphics.getHeight() / 2f + 70f), batch);
             batchGroup.draw(batch);
             batch.end();
         } else {

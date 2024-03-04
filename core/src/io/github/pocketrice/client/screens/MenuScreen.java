@@ -38,6 +38,8 @@ public class MenuScreen extends ScreenAdapter {
     Audiobox audiobox;
     Fontbook fontbook;
     SpriteBatch sprBatch;
+    BatchGroup sprBatchGroup;
+
     ModelBatch modelBatch;
     OrthographicCamera ocam;
     PerspectiveCamera pcam;
@@ -51,7 +53,7 @@ public class MenuScreen extends ScreenAdapter {
     LinkInterlerper<Float, BatchGroup> interlerpMenuFade;
 
     List<SchuMenuButton> schubs;
-    Table matchlistBtns;
+    Table tblMatchlist;
     boolean isUILoaded; // TEMP
 
     public MenuScreen(SchuGame sg) {
@@ -61,7 +63,9 @@ public class MenuScreen extends ScreenAdapter {
         fontbook = amgr.getFontbook();
 
         sprBatch = new SpriteBatch();
+        sprBatchGroup = new BatchGroup();
         modelBatch = new ModelBatch();
+
         ocam = new OrthographicCamera();
         pcam = new PerspectiveCamera(95, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         pcam.position.set(0f, -5f, 0f);
@@ -76,12 +80,13 @@ public class MenuScreen extends ScreenAdapter {
         env.add(new DirectionalLight().set(0.6f, 0.3f, 1.1f, 1f, -0.5f, 0f));
         env.add(new DirectionalLight().set(0.8f, 0.3f, 0.4f, 0f, 0.5f, 0f));
 
-        fontbook.bind(sprBatch);
+       // fontbook.bind(sprBatch);
 
-        matchlistBtns = new Table().left();
-        matchlistBtns.setPosition(70, 520);
+        tblMatchlist = new Table().left();
+        tblMatchlist.setPosition(70, 520);
+       // sprBatchGroup.add(tblMatchlist, true); // todo: fix loadPresets
         stage = new Stage();
-        stage.addActor(matchlistBtns);
+        stage.addActor(tblMatchlist);
 
         Gdx.input.setInputProcessor(stage);
         isUILoaded = false;
@@ -103,7 +108,7 @@ public class MenuScreen extends ScreenAdapter {
         modelBatch.render(panoMi, env);
         modelBatch.end();
         sprBatch.begin();
-        fontbook.draw("tinyislanders", 40, "Select a match...", new Vector2(50,700));
+        fontbook.draw("tinyislanders", 40, "Select a match...", new Vector2(50,700), sprBatch);
         if (game.getGmgr().getMatchlist() == null) { // todo: only request once
             game.getGmgr().requestMatchlist();
         } else {
@@ -113,14 +118,12 @@ public class MenuScreen extends ScreenAdapter {
                         .toList();
 
                 schubs.forEach(schub -> {
-                    matchlistBtns.add(schub).align(Align.left).padBottom(8f).padRight(20f);
-                    matchlistBtns.add(schub.getLabelMatchPeek()).align(Align.left).padBottom(8f);
-                    matchlistBtns.row();
-                    Color labelCol = schub.getLabelMatchPeek().getColor();
-                    schub.getLabelMatchPeek().setColor(labelCol.r, labelCol.g, labelCol.b, 0f); // Set relative opacity to 0.
+                    tblMatchlist.add(schub).align(Align.left).padBottom(9f).padRight(20f);
+                    tblMatchlist.add(schub.getLabelMatchPeek()).align(Align.left).padBottom(9f).padLeft(10);
+                    tblMatchlist.row();
                 });
 
-                System.out.println(ANSI_PURPLE + "btns loaded stupid >:(" + ANSI_RESET);
+                System.out.println(ANSI_PURPLE + "btns loaded stupid >.<" + ANSI_RESET);
                 isUILoaded = true;
             }
         }
@@ -128,8 +131,9 @@ public class MenuScreen extends ScreenAdapter {
             schubs.forEach(SchuButton::step);
         }
 
-        matchlistBtns.draw(sprBatch, 1f);
-        if (schubs != null && schubs.isEmpty()) fontbook.draw("koholint", 21, "No matches found.", new Vector2(200, 700));
+        if (schubs != null && schubs.isEmpty()) fontbook.draw("koholint", 21, "No matches found.", new Vector2(200, 700), sprBatch);
+        //sprBatchGroup.draw(sprBatch);
+        tblMatchlist.draw(sprBatch, 1f);
         sprBatch.end();
         stage.act();
     }

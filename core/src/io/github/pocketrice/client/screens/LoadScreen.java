@@ -12,12 +12,13 @@ import com.badlogic.gdx.graphics.g3d.Model;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import io.github.pocketrice.client.*;
+import io.github.pocketrice.client.Flavour.FlavourType;
 import io.github.pocketrice.client.ui.BatchableException;
 import net.mgsx.gltf.scene3d.scene.SceneAsset;
 
 public class LoadScreen extends ScreenAdapter {
     private static final int UPDATE_FRAME_COUNT = 60;
-    private static final int LOAD_DELAY_FRAME_COUNT = 400;
+    private static final int LOAD_DELAY_FRAME_COUNT = 300;
 
     private Audiobox audiobox;
     private Fontbook fontbook;
@@ -29,7 +30,8 @@ public class LoadScreen extends ScreenAdapter {
     private GameManager gmgr;
     private Image schuLoad;
 
-    private String loadMsg;
+    private boolean hasStartedLoad;
+    private String loadSpinner, loadInfo, loadFlavour;
     private int updateDeltaFrames, loadDelayFrames;
 
     public LoadScreen(SchuGame sg) {
@@ -39,29 +41,33 @@ public class LoadScreen extends ScreenAdapter {
         game = sg;
         gmgr = sg.getGmgr();
 
+        hasStartedLoad = false;
 
         amgr = sg.getAmgr();
         audiobox = amgr.getAudiobox();
         fontbook = amgr.getFontbook();
+       // fontbook.bind(batch);
+
         amgr.aliasedLoad("textures/schuload-fit.png", "schuload.png", Texture.class);
+        fontbook.getSizedBitmap("tf2build", 24); // Load bmf into memory
+        fontbook.getSizedBitmap("koholint", 14); // Load bmf into memory
         amgr.finishLoadingAsset("schuload.png");
-        loadAssets(); // todo: push this to another thread (async shenanigans)
+        loadAssets();
 
         schuLoad = new Image(amgr.aliasedGet("schuload.png", Texture.class));
         schuLoad.setScale(1.333f);
 
-        loadMsg = "Loading";
+        loadSpinner = "Loading";
         updateDeltaFrames = 0;
-
-        fontbook.bind(batch);
+        loadFlavour = Flavour.random(FlavourType.WAR_CRIES);
     }
 
     private void loadAssets() {
         amgr.aliasedLoad("models/terrain.glb", "modelTerrain", SceneAsset.class);
+        amgr.aliasedLoad("models/cannonball.gltf", "modelCannonProj", SceneAsset.class);
         amgr.aliasedLoad("models/skypano.obj", "modelSky", Model.class);
         amgr.aliasedLoad("models/schubarrel.obj", "modelCannonBarrel", Model.class);
         amgr.aliasedLoad("models/schuwheel.obj", "modelCannonWheel", Model.class);
-        amgr.aliasedLoad("models/cannonball.gltf", "modelCannonProj", SceneAsset.class);
         amgr.aliasedLoad("textures/main.atlas", "mainAtlas", TextureAtlas.class);
     }
 
@@ -73,27 +79,9 @@ public class LoadScreen extends ScreenAdapter {
 
     @Override
     public void render(float delta) {
-        Gdx.gl.glClearColor(0, 0, 0, 1);
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
-        batch.begin();
-        schuLoad.draw(batch, 1f);
+        amgr.update();
 
-        updateDeltaFrames++;
-        if (updateDeltaFrames >= UPDATE_FRAME_COUNT) {
-            loadMsg += ".";
-            updateDeltaFrames = 0;
-        }
-        if (loadMsg.equals("Loading....")) {
-            loadMsg = "Loading\n";
-        }
-       // loadMsg += ("▓".repeat((int) (10 * amgr.getProgress())) + "▒".repeat((int) (10 * (1 - amgr.getProgress()))));
-
-        fontbook.draw("tf2build", 24, loadMsg, new Vector2(760,70));
-        batch.end();
-
-        loadDelayFrames++;
-
-        if (amgr.update(16) && gmgr.isClientConnected() && loadDelayFrames > LOAD_DELAY_FRAME_COUNT) {
+        if (amgr.isFinished() && gmgr.isClientConnected() && loadDelayFrames > LOAD_DELAY_FRAME_COUNT) {
             grdr = new GameRenderer(gmgr);
             gmgr.setGrdr(grdr);
             game.setGrdr(grdr);
@@ -103,6 +91,30 @@ public class LoadScreen extends ScreenAdapter {
             } catch (BatchableException e) {
                 throw new RuntimeException(e);
             }
+        } else {
+            Gdx.gl.glClearColor(0, 0, 0, 1);
+            Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
+            batch.begin();
+            schuLoad.draw(batch, 1f);
+
+            updateDeltaFrames++;
+            if (updateDeltaFrames >= UPDATE_FRAME_COUNT) {
+                loadSpinner += ".";
+                updateDeltaFrames = 0;
+            }
+            if (loadSpinner.equals("Loading....")) {
+                loadSpinner = "Loading";
+            }
+            loadInfo = (!amgr.isFinished()) ? "Precaching " + amgr.getCurrentLoad()
+                    : (!gmgr.isClientConnected()) ? "Connecting to server"
+                    : loadFlavour;
+            //loadMsg += ("▓".repeat((int) (10 * amgr.getProgress())) + "▒".repeat((int) (10 * (1 - amgr.getProgress()))));
+
+            fontbook.draw("tf2build", 24, loadSpinner, new Vector2(730, 100), batch);
+            fontbook.draw("koholint", 14, loadInfo, new Vector2(730, 70), batch);
+            batch.end();
+
+            loadDelayFrames++;
         }
     }
 

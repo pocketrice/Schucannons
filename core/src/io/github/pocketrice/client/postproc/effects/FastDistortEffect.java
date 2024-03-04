@@ -1,4 +1,4 @@
-package io.github.pocketrice.client.render.effects;
+package io.github.pocketrice.client.postproc.effects;
 
 import com.badlogic.gdx.Gdx;
 import com.crashinvaders.vfx.VfxRenderContext;
@@ -7,18 +7,31 @@ import com.crashinvaders.vfx.effects.ShaderVfxEffect;
 import com.crashinvaders.vfx.framebuffer.VfxFrameBuffer;
 import com.crashinvaders.vfx.framebuffer.VfxPingPongWrapper;
 import com.crashinvaders.vfx.gl.VfxGLUtils;
+import lombok.Getter;
 
-public class AsciiEffect extends ShaderVfxEffect implements ChainVfxEffect {
+public class FastDistortEffect extends ShaderVfxEffect implements ChainVfxEffect {
     private static final String U_TEXTURE0 = "u_texture0";
+    private static final String U_TIME = "u_time";
 
-    public AsciiEffect() {
-        super(VfxGLUtils.compileShader(Gdx.files.classpath("gdxvfx/shaders/screenspace.vert"), Gdx.files.internal("shaders/ascii.frag")));
+    @Getter
+    private float time = 0f;
+
+    public FastDistortEffect() {
+        super(VfxGLUtils.compileShader(Gdx.files.classpath("gdxvfx/shaders/screenspace.vert"), Gdx.files.internal("shaders/fastdistort.frag")));
         rebind();
     }
 
     @Override
     public void update(float delta) {
         super.update(delta);
+        setTime(this.time + delta);
+    }
+
+
+
+    public void setTime(float time) {
+        this.time = time;
+        setUniform(U_TIME, time);
     }
 
     @Override
@@ -26,6 +39,7 @@ public class AsciiEffect extends ShaderVfxEffect implements ChainVfxEffect {
         super.rebind();
         program.bind();
         program.setUniformi(U_TEXTURE0, TEXTURE_HANDLE0);
+        program.setUniformf(U_TIME, time);
     }
 
     @Override
