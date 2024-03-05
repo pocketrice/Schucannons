@@ -3,7 +3,6 @@ package io.github.pocketrice.client;
 import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
-import io.github.pocketrice.client.Match.PhaseType;
 import io.github.pocketrice.server.ServerPayload;
 import io.github.pocketrice.shared.KryoInitialiser;
 import io.github.pocketrice.shared.Request;
@@ -104,7 +103,7 @@ public class SchuClient extends GameClient {
 
                                 serverTps = Double.parseDouble(payload[2]);
 
-                               logCon("gs_ping received. " + pingToServer + "ms (c-s), " + pingToClient + "ms (s-c), " + ping + "ms (total)");
+                                logCon("gs_ping received. " + pingToServer + "ms (c-s), " + pingToClient + "ms (s-c), " + ping + "ms (total)");
 
                                 if (!serverName.equals(payload[1])) {
                                     serverAddress = kryoClient.getRemoteAddressTCP();
@@ -117,19 +116,9 @@ public class SchuClient extends GameClient {
                                 gmgr.processPrestart();
                             }
 
-                            case "GS_movePhase" -> {
-                                log("Move phase starting...");
-                                gmgr.receivePhaseSignal(rp.getPayload(), PhaseType.MOVE);
-                            }
-
-                            case "GS_promptPhase" -> {
-                                log("Prompt phase starting...");
-                                gmgr.receivePhaseSignal(rp.getPayload(), PhaseType.PROMPT);
-                            }
-
-                            case "GS_simPhase" -> {
-                                log ("Sim phase starting...");
-                                gmgr.receivePhaseSignal(rp.getPayload(), PhaseType.SIM);
+                            case "GS_phase" -> {
+                                logInfo("Received phase request");
+                                gmgr.receivePhaseSignal(rp.getPayload());
                             }
 
                             case "GS_ackReady" -> {

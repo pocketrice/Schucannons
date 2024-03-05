@@ -4,6 +4,7 @@ import com.badlogic.gdx.math.Vector3;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
+import com.sun.jdi.InvalidTypeException;
 import io.github.pocketrice.client.*;
 import io.github.pocketrice.client.Match.GameState;
 import io.github.pocketrice.shared.KryoInitialiser;
@@ -20,12 +21,11 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
-import static io.github.pocketrice.server.GameSimulator.MOVE_PHASE_MAX_DIST;
-import static io.github.pocketrice.server.GameSimulator.PROMPT_PHASE_SEC;
+import static io.github.pocketrice.server.GameSimulator.*;
 
 public class DedicatedServer extends GameServer {
-    static final int TPSCHECK_TICKS = 20;
-    Map<UUID, Set<Connection>> clientMap;
+    static final int TPS_CHECK_TICKS = 20;
+    Map<UUID, MatchData> clientMap;
     Matchmaker mm;
     GameSimulator gsim;
 
@@ -108,8 +108,8 @@ public class DedicatedServer extends GameServer {
                                 Match m = mm.findMatch(mid.toString());
                                 log("Match " + m + " selected by " + con);
                                 m.addPlayers(player);
-                                clientMap.putIfAbsent(mid, new HashSet<>());
-                                clientMap.get(mid).add(con);
+                                clientMap.putIfAbsent(mid, new MatchData());
+                                clientMap.get(mid).addCon(con);
 
                                 sendPlayerList(mid, con);
                                 kryoServer.sendToTCP(con.getID(), new Response("GS_selMatch", constructPayload(mid)));
@@ -123,7 +123,7 @@ public class DedicatedServer extends GameServer {
                                 m.getPlayer(UUID.fromString(ids[1])).setReady(true);
                                 m.updateState();
 
-                                if (m.getGameState() == GameState.READY) {
+                                if (m.getState() == GameState.READY) {
                                     sendToMatch(m.getMatchId(), new Response("GS_prestart", null));
                                 } else {
                                     kryoServer.sendToTCP(con.getID(), new Response("GS_ackReady", null));
@@ -131,8 +131,34 @@ public class DedicatedServer extends GameServer {
                             }
 
                             case "GC_start" -> {
-                                logInfo("Pushing phase request!");
-                                sendToMatch(UUID.fromString((String) rq.getPayload()), new Response("GS_movePhase", PROMPT_PHASE_SEC + "|" + MOVE_PHASE_MAX_DIST));
+                                logInfo("Pushing start request!");
+                                try {
+                                    sendPhase(UUID.fromString((String) rq.getPayload()));
+                                } catch (InvalidTypeException e) {
+                                    throw new RuntimeException(e);
+                                }
+                            }
+
+                            case "GC_submitPhase" -> {
+                                Match m = findMatchFromCon(con);
+                                MatchData md = clientMap.get(m.getMatchId());
+
+                                logInfo("Connection " + con + " from " + m + " submitted for phase " + m.getPhase());
+                                if (!md.setSel(con, true)) try {
+                                    throw new InvalidTypeException("Improper match con order!");
+                                } catch (InvalidTypeException e) {
+                                    throw new RuntimeException(e);
+                                }
+
+                                md.setSel(clientMap.get(m.getMatchId()).getCons().stream().filter(c -> !c.equals(con)).findFirst().get(), true); // wut the heck is this? (before you remove yes, this is temporary!!!!!!)
+                                System.out.println(clientMap.get(m.getMatchId()).getCons().stream().filter(c -> !c.equals(con)).findFirst().get());
+                                if (md.isAReady() && md.isBReady()) {
+                                    try {
+                                        sendPhase(m.getMatchId());
+                                    } catch (InvalidTypeException e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                }
                             }
 
                             case "GC_fillMatch" -> {
@@ -143,7 +169,7 @@ public class DedicatedServer extends GameServer {
                                 m.updateState();
                                 sendPlayerList(mid, con);
 
-                                if (m.getGameState() == GameState.READY) {
+                                if (m.getState() == GameState.READY) {
                                     sendToMatch(m.getMatchId(), new Response("GS_prestart", null));
                                 }
                             }
@@ -174,14 +200,14 @@ public class DedicatedServer extends GameServer {
                 /*
                  * TPS calculator
                  */
-                if (tickCounter >= TPSCHECK_TICKS) {
+                if (tickCounter >= TPS_CHECK_TICKS) {
                     tps = (double) tickCounter / ChronoUnit.SECONDS.between(tickCheckStart, Instant.now());
                     tickCounter = 0;
                     tickCheckStart = Instant.now();
                 }
 
                 try {
-                    Thread.sleep(1000 / tickRate); // NOT busywaiting! Ignore warning.
+                    Thread.sleep(1000 / tickRate); // NOT busywaiting! Ignore warning :)
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
@@ -219,27 +245,42 @@ public class DedicatedServer extends GameServer {
         ResponseStatus status = (clients.remove(client)) ? ResponseStatus.OK : ResponseStatus.FAIL;
         kryoServer.sendToTCP(client.getKryoClient().getID(), new Response(status.name(), null)); // still need response?
         client.getKryoClient().stop();
-
-
-        // TODO: disconnect client from krs :(
     }
 
     public Match findMatchFromCon(Connection con) {
-        Set<Entry<UUID, Set<Connection>>> conMap = clientMap.entrySet();
+        Set<Entry<UUID, MatchData>> conMap = clientMap.entrySet();
         UUID result = null;
 
-        for (Entry<UUID, Set<Connection>> conEntry : conMap) {
-            if (conEntry.getValue().contains(con)) result = conEntry.getKey();
+        for (Entry<UUID, MatchData> conEntry : conMap) {
+            if (conEntry.getValue().hasCon(con)) result = conEntry.getKey();
         }
 
         return mm.findMatch(result.toString());
     }
+
+    public void sendPhase(UUID mid) throws InvalidTypeException {
+        Match m = mm.findMatch(String.valueOf(mid));
+        String payload;
+
+        m.advancePhase();
+        switch (m.getPhase()) {
+            case MOVE -> payload = MOVE_PHASE_SEC + "|" + MOVE_PHASE_MAX_DIST;
+
+            case PROMPT -> payload = String.valueOf(PROMPT_PHASE_SEC);
+
+            case SIM -> payload = String.valueOf(SIM_PHASE_SEC);
+
+            default -> throw new InvalidTypeException("Match should not be ended/invalid/none!");
+        }
+        logInfo("Requesting " + m.getPhase() + " phase from " + m);
+        sendToMatch(mid, new Response("GS_phase", payload));
+    }
+
     @Override
     public void sendPayload(UUID mid) {
         ServerPayload sp = constructPayload(mid);
         outBuffer.addFirst(sp);
         cleanBuffers();
-        //System.out.println("GS_PL -> " + mid);
         sendToMatch(mid, new Response("GS_pl", sp));
     }
 
@@ -249,7 +290,7 @@ public class DedicatedServer extends GameServer {
     }
 
     public void sendToMatch(UUID mid, Response resp) {
-        for (Connection con : clientMap.get(mid)) {
+        for (Connection con : clientMap.get(mid).getCons()) {
             kryoServer.sendToTCP(con.getID(), resp);
         }
     }

@@ -12,7 +12,8 @@ public class Interlerper<T> {
     private T startVal, endVal;
     private EasingFunction easing;
     @Setter
-    private boolean isLooping, isInterlerp, isForward;
+    private boolean isLooping, isInterlerp;
+    private boolean isForward;
     @Setter
     private double stepSize, t;
 
@@ -80,15 +81,20 @@ public class Interlerper<T> {
         return result;
     }
 
+    public void setForward(boolean isForward) {
+        this.isForward = isForward;
+        isInterlerp = true; // Enable interlerping (again), since either disabled after terminal point or still running.
+    }
 
     public double advanceParam() {
         if (isLooping) {
-            t = (isForward) ? (t + stepSize) % 1 : (t - stepSize) % 1;
+            t = (isForward) ? t + stepSize : t - stepSize;
         } else {
             t = (isForward) ? Math.min(1.0, t + stepSize) : Math.max(0, t - stepSize); // EVIL BUG!!!!11!!! The fabled "min-max flip flop" bug. Total of 2 hours spent debugging. Cheeeeers! :DD
         }
         return t;
     }
+
     // Value-only interlerp; useful for lighter uses of interlerp.
     public T advance() {
         advanceParam();

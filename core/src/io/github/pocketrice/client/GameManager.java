@@ -28,8 +28,6 @@ public class GameManager {
     private Match match; // This is a local-only compilation of ServerPayloads — for ease of storage.
     @Getter
     private String[] matchlist; // temp
-    @Getter
-    private PhaseType phaseType;
 
 
     @Getter @Setter
@@ -51,7 +49,6 @@ public class GameManager {
         audiobox.setAmgr(amgr);
 
         isClientConnected = false;
-        phaseType = PhaseType.INVALID;
     }
     public void requestMatchlist() {
         client.kryoClient.sendTCP(new Request("GC_matches", null));
@@ -122,11 +119,13 @@ public class GameManager {
         Arrays.stream(match.players()).filter(p -> !match.hasPlayer(p.getPlayerId())).forEach(p -> match.kickPlayer(p)); // Kick all outdated players
     }
 
-    public void receivePhaseSignal(Object payload, PhaseType phase) {
+    public void receivePhaseSignal(Object payload) {
         String[] phaseInfo = ((String) payload).split("\\|"); // [ phaseTime, movePhaseMaxDist (opt) ]
         phaseDuration = Integer.parseInt(phaseInfo[0]);
-        phaseType = phase;
         phaseStartInstant = Instant.now();
+        match.advancePhase();
+
+        PhaseType phase = match.getPhase();
 
         switch (phase) {
             case MOVE -> {
@@ -178,7 +177,7 @@ public class GameManager {
     }
 
     public void processPrestart() {
-        if (match.getGameState() != Match.GameState.READY) client.logErr("Server dictated ready but game state out-of-sync.");
+        if (match.getState() != Match.GameState.READY) client.logErr("Server dictated ready but game state out-of-sync.");
         startInstant = Instant.now();
         audiobox.playSfx("aero-seatbelt", 3f);
     }
@@ -197,4 +196,8 @@ public class GameManager {
         return pstate;
     }
 
+    public void submitPhase() {
+        isRunningPhase = false;
+        client.kryoClient.sendTCP(new Request("GC_submitPhase", null));
+    }
 }

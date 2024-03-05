@@ -2,9 +2,6 @@ package io.github.pocketrice.shared;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.scenes.scene2d.ui.Label;
-import com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle;
-import io.github.pocketrice.client.Fontbook;
 import io.github.pocketrice.client.ui.Batchable;
 import io.github.pocketrice.client.ui.BatchableException;
 import lombok.Getter;
@@ -55,8 +52,9 @@ public class LinkInterlerper<T,U> extends Interlerper<T> {
     public void step() {
         if (isInterlerp()) {
             double easedT = getEasing().apply(advanceParam());
-            if (getT() == 0 && preFunc != null) preFunc.accept(linkObj);
-            if (getT() == 1 && postFunc != null) postFunc.accept(linkObj);
+
+            if (getT() == ((isForward()) ? 0 : 1) && preFunc != null) preFunc.accept(linkObj);
+            if (getT() == ((isForward()) ? 1 : 0) && postFunc != null) postFunc.accept(linkObj);
 
             if (isForward() && getT() >= 1 || getT() <= 0) {
                 setInterlerp(false);
@@ -67,20 +65,23 @@ public class LinkInterlerper<T,U> extends Interlerper<T> {
     }
 
     // Convenience initialisers
-    public static LinkInterlerper<Integer, ? super Label> generateFontTransition(Label l, int v1, int v2, EasingFunction easing, double ss) {
-        LinkInterlerper<Integer, ? super Label> lil = new LinkInterlerper<>(v1, v2, easing, 0.04)
-                .linkObj(l);
 
-        lil.setInterlerp(false);
+    // Deprecated; use scl instead.
 
-        lil.linkFunc((t, obj) -> {
-            LabelStyle style = ((Label) obj).getStyle();  // vv The easing is ALWAYS linear here, because step() already applies an easing.
-            int fontSize = lil.interlerp(t, EasingFunction.LINEAR); // Rmeember that interlerp returns double b/c covers most numbertypes.
-            style.font = Fontbook.quickFont(style.font.toString(), fontSize);
-        });
-
-        return lil;
-    }
+//    public static LinkInterlerper<Integer, ? super Label> generateFontTransition(Label l, int v1, int v2, EasingFunction easing, double ss) {
+//        LinkInterlerper<Integer, ? super Label> lil = new LinkInterlerper<>(v1, v2, easing, 0.04)
+//                .linkObj(l);
+//
+//        lil.setInterlerp(false);
+//
+//        lil.linkFunc((t, obj) -> {
+//            LabelStyle style = ((Label) obj).getStyle();  // vv The easing is ALWAYS linear here, because step() already applies an easing.
+//            int fontSize = lil.interlerp(t, EasingFunction.LINEAR); // Rmeember that interlerp returns double b/c covers most numbertypes.
+//            style.font = Fontbook.quickFont(style.font.toString(), fontSize);
+//        });
+//
+//        return lil;
+//    }
 
     // Deprecated; use scl instead.
 

@@ -16,10 +16,15 @@ import static io.github.pocketrice.shared.AnsiCode.*;
 
 @Getter
 public class Match implements Comparable<Match> {
+    public static final int MAX_SPECTATORS = 5;
+
     Player currentPlayer, oppoPlayer;
     List<SpectatorPlayer> spectators;
     Vector3 cballPos;
-    GameState gameState;
+    @Getter
+    GameState state;
+    @Getter
+    PhaseType phase; // just to store match phase. Don't do calcs in here(?)
     UUID matchId;
     @Setter
     String matchName;
@@ -28,8 +33,6 @@ public class Match implements Comparable<Match> {
 
     boolean isFull;
     int turnCount;
-
-    public static int MAX_SPECTATORS = 5;
 
     public Match() {
         this(null, null);
@@ -40,7 +43,8 @@ public class Match implements Comparable<Match> {
         oppoPlayer = oppo;
         spectators = new ArrayList<>();
         spectators.addAll(List.of(specs));
-        gameState = GameState.AWAIT;
+        state = GameState.AWAIT;
+        phase = PhaseType.NONE;
         matchId = UUID.randomUUID();
         matchName = "";
 
@@ -50,14 +54,14 @@ public class Match implements Comparable<Match> {
 
 
     public void updateState() { // force a`wait if still await (should not be called during that phase anyway), or check for ended.
-        if (gameState == GameState.AWAIT && currentPlayer != null && oppoPlayer != null && currentPlayer.isReady && oppoPlayer.isReady)
-            gameState = GameState.READY; // note: matches aren't updating fast enough...
-        else if (gameState != GameState.AWAIT && (turnCount > 10 || currentPlayer.health <= 0 || oppoPlayer.health <= 0))
-            gameState = GameState.ENDED;
+        if (state == GameState.AWAIT && currentPlayer != null && oppoPlayer != null && currentPlayer.isReady && oppoPlayer.isReady)
+            state = GameState.READY; // note: matches aren't updating fast enough...
+        else if (state != GameState.AWAIT && (turnCount > 10 || currentPlayer.health <= 0 || oppoPlayer.health <= 0))
+            state = GameState.ENDED;
     }
 
     public void start() throws InterruptedException {
-        gameState = GameState.READY;
+        state = GameState.READY;
         System.out.println(ANSI_BLUE + "Match started.\n\n" + ANSI_RESET);
         while (turnCount < 10) {
             turnCount++;
@@ -160,7 +164,7 @@ public class Match implements Comparable<Match> {
 
         System.out.println("◇ Turn phase ended. Took " + truncate(msSinceEpoch() - timestamp, 2) + " ms.");
         updateState();
-        if (gameState == GameState.ENDED)
+        if (state == GameState.ENDED)
             endMatch();
         else {
             if (!(oppoPlayer instanceof BotPlayer) || !((BotPlayer) oppoPlayer).isDummy()) { // dummy bots don't take a turn (CHECK THIS)
@@ -227,6 +231,12 @@ public class Match implements Comparable<Match> {
         return Arrays.stream(players()).anyMatch(p -> p.getPlayerId().equals(pid));
     }
 
+    public void advancePhase() {
+        int newPhase = (phase.val + 1 > PhaseType.ENDED.val) ? 0 : phase.val + 1;
+        System.out.println(phase + " -> " + newPhase);
+        phase = PhaseType.get(newPhase);
+    }
+
 
     public enum PlayerType {
         INVALID(-1),
@@ -270,18 +280,63 @@ public class Match implements Comparable<Match> {
             val = i;
         }
 
+        static GameState get(int i) {
+            switch (i) {
+                case 0 -> {
+                    return AWAIT;
+                }
+                case 1 -> {
+                    return READY;
+                }
+                case 2 -> {
+                    return RUNNING;
+                }
+                case 3 -> {
+                    return ENDED;
+                }
+                default -> {
+                    return INVALID;
+                }
+            }
+        }
+
         public final int val;
     }
 
-    public enum PhaseType {
+    public enum PhaseType { // bad order?
         INVALID(-1),
+        NONE(0),
         MOVE(1),
         PROMPT(2),
         SIM(3),
-        ENDED(0);
+        ENDED(4);
+
 
         PhaseType(int i) {
             val = i;
+        }
+
+        static PhaseType get(int i) {
+            switch (i) {
+                case 0 -> {
+                    return NONE;
+                }
+                case 1 -> {
+                    return MOVE;
+                }
+                case 2 -> {
+                    return PROMPT;
+                }
+                case 3 -> {
+                    return SIM;
+                }
+                case 4 -> {
+                    return ENDED;
+                }
+                default -> {
+                    return INVALID;
+                }
+            }
         }
 
         public final int val;

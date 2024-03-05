@@ -42,6 +42,7 @@ import org.javatuples.Triplet;
 
 import java.util.UUID;
 
+import static com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888;
 import static io.github.pocketrice.client.SchuGame.VIEWPORT_HEIGHT;
 import static io.github.pocketrice.client.SchuGame.VIEWPORT_WIDTH;
 
@@ -112,7 +113,7 @@ public class GameRenderer {
 
         postBatch = new SpriteBatch();
         postprocBlur = new BlurPostProcessor(15, 4f, 0.3f, postBatch);
-        vfxManager = new VfxManager(Pixmap.Format.RGBA8888);
+        vfxManager = new VfxManager(RGBA8888);
         vfxManager.setBlendingEnabled(true);
         vfxFilmGrain = new FilmGrainEffect();
         vfxFastDistort = new FastDistortEffect();
@@ -144,6 +145,13 @@ public class GameRenderer {
                         Gdx.graphics.setSystemCursor(SystemCursor.Arrow); // To avoid memory cost (of running a tad of code...). Note that cursor is set to NONE if debug is enabled so this is overwritten.
                     }
 
+                    case Input.Keys.SHIFT_LEFT ->  {
+                        SchuGame game = gmgr.getGame();
+                        if (game.isDebug) {
+                            inputMult.removeProcessor(inputCic);
+                        }
+                    }
+
                     case Input.Keys.ESCAPE -> {
                         isPaused = !isPaused;
                         isPauseFirstPass = true;
@@ -172,6 +180,14 @@ public class GameRenderer {
 
             @Override
             public boolean keyUp(int keycode) {
+                switch (keycode) {
+                    case Input.Keys.SHIFT_LEFT -> {
+                        SchuGame game = gmgr.getGame();
+                        if (game.isDebug) {
+                            inputMult.addProcessor(1, inputCic);
+                        }
+                    }
+                }
                 downKeys.remove(keycode);
                 return true;
             }
@@ -241,6 +257,20 @@ public class GameRenderer {
             vfxManager.applyEffects();
             vfxManager.renderToScreen();
         }
+//        else if (gmgr.getGame().isDebug){
+//            fbo.begin();
+//            renderScene();
+//            fbo.end();
+//
+//            TextureData bufferData = fbo.getColorBufferTexture().getTextureData();
+//            bufferData.prepare();
+//            Pixmap bufferPix = bufferData.consumePixmap();
+//            Color pickColor = new Color();
+//            Color.rgba8888ToColor(pickColor, bufferPix.getPixel(Gdx.input.getX(), Gdx.input.getY()));
+//
+//            postBatch.begin();
+//
+//        }
         else {
             renderScene();
         }
@@ -325,7 +355,7 @@ public class GameRenderer {
         if (fbo != null) fbo.dispose();
 
         FrameBufferBuilder frameBufferBuilder = new FrameBufferBuilder(width, height);
-        frameBufferBuilder.addBasicColorTextureAttachment(Pixmap.Format.RGBA8888);
+        frameBufferBuilder.addBasicColorTextureAttachment(RGBA8888);
 
         // Enhanced precision, only needed for 3D scenes
         frameBufferBuilder.addDepthRenderBuffer(GL30.GL_DEPTH_COMPONENT24);

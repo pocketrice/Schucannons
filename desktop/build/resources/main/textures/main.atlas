@@ -1,18 +1,25 @@
 main.png
-size: 973, 267
+size: 974, 267
 format: RGBA8888
 filter: Linear,Linear
 repeat: none
-flourish
+1px
   rotate: false
   xy: 0, 0
+  size: 1, 1
+  orig: 1, 1
+  offset: 0, 0
+  index: -1
+flourish
+  rotate: false
+  xy: 1, 0
   size: 935, 267
   orig: 935, 267
   offset: 0, 0
   index: -1
 pokemmo
   rotate: false
-  xy: 935, 0
+  xy: 936, 0
   size: 38, 38
   split: 12, 13, 12, 13
   pad: 15, 15, 15, 15

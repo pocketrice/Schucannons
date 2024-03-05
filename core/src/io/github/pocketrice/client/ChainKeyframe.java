@@ -14,7 +14,7 @@ public class ChainKeyframe<U> {
     SpriteBatch batch;
 
     // Assume LinkInterlerper is of type <interpObj ∋ interpObj.isBatchable, Pair<linkObj, SpriteBatch>>
-    public <V> ChainKeyframe(LinkInterlerper<?, Pair<U, SpriteBatch>> li) {
+    public ChainKeyframe(LinkInterlerper<?, Pair<U, SpriteBatch>> li) {
         this((LinkInterlerper<?, U>) li, li.getLinkObj().getValue1(), (pair, batch) -> {
             U targetVal = ((Pair<U, SpriteBatch>) pair).getValue0();
             Batchable targetBa = (targetVal instanceof Batchable) ? (Batchable) targetVal : new Batchable(targetVal);
@@ -50,11 +50,9 @@ public class ChainKeyframe<U> {
     public void step() {
         if (linkInterlerp.isInterlerp()) {
             linkInterlerp.step();
-            //System.out.println("CKF step");
         }
         else {
             persistFunc.accept(linkInterlerp.getLinkObj(), batch);
-            //System.out.println("CKF PERSIST");
         }
     }
 

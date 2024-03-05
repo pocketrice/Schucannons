@@ -20,6 +20,7 @@ public class ChainInterlerper {
     }
     @SafeVarargs
     public ChainInterlerper(SpriteBatch b, Pair<Float, ChainKeyframe>... keyframes) {
+        isForward = true;
         sublerps = new TreeMap<>();
         for (Pair<Float, ChainKeyframe> kf : keyframes) {
             addSublerp(kf.getValue0(), kf.getValue1());
@@ -59,11 +60,12 @@ public class ChainInterlerper {
     }
 
     public void step(float deltaStep) {
-         elapsedTime += deltaStep;
+        List<Float> times = sublerps.keySet().stream().toList();
 
-         List<Float> times = sublerps.keySet().stream().toList();
+        elapsedTime = Math.min(times.get(times.size()-1), Math.max(0, (isForward) ? elapsedTime + deltaStep : elapsedTime - deltaStep));
+
          for (float time : times) {
-             if (elapsedTime >= time) {
+             if ((isForward) ? elapsedTime >= time : elapsedTime <= time) {
                  sublerps.get(time).forEach(ChainKeyframe::step);
                  //System.out.println("STEP " + time);
              }
@@ -87,6 +89,7 @@ public class ChainInterlerper {
     }
 
     public void setForward(boolean isForward) {
+        this.isForward = isForward;
         getLerps().forEach(l -> l.linkInterlerp.setForward(isForward));
     }
 }

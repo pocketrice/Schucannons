@@ -22,6 +22,7 @@ allprojects {
         ashleyVersion = '1.7.4'
         aiVersion = '1.8.2'
         gdxControllersVersion = '2.2.1'
+        shapedrawerVersion = '2.5.0'
     }
 
     repositories {
@@ -70,10 +71,10 @@ project(":core") {
         implementation 'org.javatuples:javatuples:1.2'
         implementation 'de.javakaffee:kryo-serializers:0.45'
         implementation 'org.apache.commons:commons-text:1.11.0'
-       // implementation 'com.github.javafaker:javafaker:1.0.2'
+        implementation "space.earlygrey:shapedrawer:$shapedrawerVersion"
         implementation 'com.crashinvaders.vfx:gdx-vfx-core:0.5.4'
         implementation 'com.crashinvaders.vfx:gdx-vfx-effects:0.5.4'
-        implementation("com.maltaisn:msdf-gdx:0.2.1")
+        implementation 'com.maltaisn:msdf-gdx:0.2.1'
         compileOnly 'org.projectlombok:lombok:1.18.30'
         compileOnly "com.strongjoshua:libgdx-inGameConsole:1.0.0"
         annotationProcessor 'org.projectlombok:lombok:1.18.30'

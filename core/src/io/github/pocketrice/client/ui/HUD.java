@@ -1,6 +1,7 @@
 package io.github.pocketrice.client.ui;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Cursor;
 import com.badlogic.gdx.graphics.Texture;
@@ -14,6 +15,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.utils.NinePatchDrawable;
+import com.badlogic.gdx.utils.StringBuilder;
 import io.github.pocketrice.client.*;
 import io.github.pocketrice.client.Match.PhaseType;
 import io.github.pocketrice.client.ui.Batchable.InterlerpPreset;
@@ -22,9 +24,11 @@ import io.github.pocketrice.shared.Interlerper;
 import io.github.pocketrice.shared.LinkInterlerper;
 import lombok.Getter;
 import org.javatuples.Pair;
+import space.earlygrey.shapedrawer.ShapeDrawer;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.function.Consumer;
 
 import static io.github.pocketrice.client.GameManager.START_MAX_DELAY;
@@ -44,6 +48,7 @@ public class HUD {
     private GameManager gmgr;
     private SchuAssetManager amgr;
     private GameRenderer grdr;
+    private ShapeDrawer sdr;
     @Getter
     private Stage stage;
     private SpriteBatch batch;
@@ -62,19 +67,19 @@ public class HUD {
     private Interlerper<Float> matchInfoOpacityInterlerp;
     private Interlerper<Integer> matchInfoWaitAnimInterlerp;
 
+    private Vector2 debugBoxStart;
     public HUD(GameManager gm, GameRenderer gr) {
+        batch = new SpriteBatch();
+        batchGroup = new BatchGroup();
         gmgr = gm;
         amgr = gmgr.getAmgr();
         grdr = gr;
-
-        batch = new SpriteBatch();
-        batchGroup = new BatchGroup();
-
         audiobox = amgr.getAudiobox();
         fontbook = amgr.getFontbook();
-        //fontbook.bind(batch);
 
         loadAssets();
+        sdr = new ShapeDrawer(batch, mainSheet.findRegion("1px"));
+        //fontbook.bind(batch);
 
         LabelStyle thetaMagPrevStyle = new LabelStyle();
         thetaMagPrevStyle.background = new NinePatchDrawable(mainSheet.createPatch("pokemmo"));
@@ -96,7 +101,7 @@ public class HUD {
 
         //BackgroundColor sbBg = BackgroundColor.generateSolidBg(Color.valueOf("#d3d2e97f"));
         sidebar = new Table().left();
-        sidebar.setPosition(800, 400);
+        sidebar.setPosition(1000, 400); // Set arbitrary distance outside of viewport as initial pos (note: ChainInterlerper should NEVER hide/show items, assuming it may be used for scenarios where terminal visible points are used)
         //sidebar.add(thetaPreview).pad(10f, 0f, 10f, 0f);
         sidebar.add(labelTheta).pad(3f, 5f, 3f, 5f).center().minWidth(140);
         sidebar.row().padTop(20);
@@ -111,19 +116,8 @@ public class HUD {
         sidebar.add(new NumberButton(true, true, " m/s", SchuButton.generateStyle("sm64", Color.valueOf("#DEDEEE"), 25), 90f, 0f, 3f, labelMag, amgr)).padRight(40).right();
         sidebar.add(new NumberButton(false, true, " m/s", SchuButton.generateStyle("sm64", Color.valueOf("#DEDEEE"), 25), 90f, 0f, 3f, labelMag, amgr)).padRight(40).right();
         sidebar.row().padTop(20);
-        SchuButton btnFire = new SchuButton("FIRE IN THE HOLE!", SchuButton.generateStyle("sm64", Color.valueOf("#8eb4a9bf"), 18), amgr)
-                .activeFunc((objs) -> System.out.println("192.168.1.64"));
-        btnFire.bindInterlerp(1f, 1.05f, InterlerpPreset.SCALE, EasingFunction.EASE_IN_OUT_SINE, 0.04);
-        btnFire.bindInterlerp(Color.valueOf("#8eb4a9bf"), Color.valueOf("#adccc5bf"), InterlerpPreset.COLOR, EasingFunction.EASE_IN_OUT_SINE, 0.04);
-        sidebar.add(btnFire).left();
-
-        batchGroup.add(new Batchable(btnFire)); // to be able to apply interlerps
-        stage = new Stage();
-        stage.addActor(sidebar);
-        //stage.addActor(btnFire);
 
         phaseStartChInterlerp = new ChainInterlerper(batch);
-
         phaseFlourishInterlerp = new LinkInterlerper<>(0f, 1f, EasingFunction.EASE_OUT_CUBIC, 0.012)
                 .linkObj(Pair.with(sprFlourish, batch))
                 .linkFunc((t, obj) -> {
@@ -151,7 +145,7 @@ public class HUD {
                             false,
                             false);
 
-                  // Gdx.gl.glScissor(0,0, (int) (spr.getWidth() * lerpVal), (int) (spr.getHeight() * lerpVal));
+                    // Gdx.gl.glScissor(0,0, (int) (spr.getWidth() * lerpVal), (int) (spr.getHeight() * lerpVal));
                 })
                 .preFunc(SPRBATCH_FUNC)
                 .postFunc(SPRBATCH_FUNC);
@@ -169,21 +163,41 @@ public class HUD {
                 })
                 .preFunc((obj) -> batchGroup.enable(obj));
 
-        sidebarPosInterlerp = LinkInterlerper.generatePosTransition(new Batchable(sidebar), new Vector2(800, sidebar.getY()), new Vector2(700, sidebar.getY()), EasingFunction.EASE_OUT_BACK, 0.01)
+        sidebarPosInterlerp = LinkInterlerper.generatePosTransition(new Batchable(sidebar), new Vector2(1000, sidebar.getY()), new Vector2(700, sidebar.getY()), EasingFunction.EASE_OUT_BACK, 0.0075)
                 .preFunc((obj) -> batchGroup.enable(obj));
 
-       // btnFirePosInterlerp = LinkInterlerper.generatePosTransition(new Batchable(btnFire), new Vector2(800, btnFire.getY()), new Vector2(700, btnFire.getY()), EasingFunction.EASE_OUT_BACK, 0.01);
+        // btnFirePosInterlerp = LinkInterlerper.generatePosTransition(new Batchable(btnFire), new Vector2(800, btnFire.getY()), new Vector2(700, btnFire.getY()), EasingFunction.EASE_OUT_BACK, 0.01);
 
 
         phaseStartChInterlerp.addSublerp(1f, new ChainKeyframe(phaseFlourishInterlerp));
         phaseStartChInterlerp.addSublerp(2f, new ChainKeyframe(phaseTextInterlerp, batch));
         phaseStartChInterlerp.addSublerp(2f, new ChainKeyframe(sidebarPosInterlerp, batch));
-        //phaseStartChInterlerp.addSublerp(2f, new ChainKeyframe(btnFirePosInterlerp, batch));
         batchGroup.add(phaseStartChInterlerp, false);
 
         matchInfoOpacityInterlerp = new Interlerper<>(1f, 0f, EasingFunction.EASE_IN_OUT_CUBIC, 0.0025);
         matchInfoWaitAnimInterlerp = new Interlerper<>(0, 4, EasingFunction.LINEAR, 0.005);
         matchInfoWaitAnimInterlerp.setLooping(true);
+
+
+        SchuButton btnFire = new SchuButton("FIRE IN THE HOLE!", SchuButton.generateStyle("sm64", Color.valueOf("#8eb4a9bf"), 18), amgr)
+                .sfxDown("bw2_selmenu")
+                .activeObjs(List.of(sidebarPosInterlerp))
+                .activeFunc((objs) -> {
+                    LinkInterlerper sidebarInterlerp = (LinkInterlerper) objs.get(0);
+                    sidebarInterlerp.setForward(false);
+                    gmgr.submitPhase();
+                });
+
+        btnFire.reattachListener();
+
+        btnFire.bindInterlerp(1f, 1.05f, InterlerpPreset.SCALE, EasingFunction.EASE_IN_OUT_SINE, 0.04);
+        btnFire.bindInterlerp(Color.valueOf("#8eb4a9bf"), Color.valueOf("#adccc5bf"), InterlerpPreset.COLOR, EasingFunction.EASE_IN_OUT_SINE, 0.04);
+        sidebar.add(btnFire).left();
+
+        batchGroup.add(new Batchable(btnFire)); // to be able to apply interlerps
+        stage = new Stage();
+        stage.addActor(sidebar);
+        //stage.addActor(btnFire);
     }
 
     public void render() {
@@ -191,7 +205,7 @@ public class HUD {
 //            fontbook.bind(batch);
 //        }
         Match matchState = gmgr.getMatchState();
-        PhaseType phase = gmgr.getPhaseType();
+        PhaseType phase = matchState.getPhase();
         Vector3 projVec = (matchState.getCurrentPlayer() == null) ? Vector3.Zero : matchState.getCurrentPlayer().getProjVector();
         batch.begin();
         fontbook.formatDraw("benzin", 24, Color.valueOf("#b8b1f22F"), matchState.getIdentifier(), new Vector2(960 - 18f * matchState.getIdentifier().length(), 820), batch);
@@ -207,6 +221,8 @@ public class HUD {
 
             if (!batchGroup.isEnabled(phaseStartChInterlerp)) batchGroup.enable(phaseStartChInterlerp);
             phaseStartChInterlerp.step(0.01f);
+            if (!gmgr.isRunningPhase()) sidebarPosInterlerp.step(); // Retract sidebar if done (early, or forced).
+
             labelTime.setText(remainingSec / 60 + ":" + ((remainingSec % 60 < 10) ? "0" : "") + remainingSec % 60);
 
             switch (phase) {
@@ -235,7 +251,11 @@ public class HUD {
         }
 
         if (gmgr.getJoinInstant() != null) {
-            labelMatchInfo.setText("Waiting for players" + ".".repeat(matchInfoWaitAnimInterlerp.advance()));
+            StringBuilder loadText = labelMatchInfo.getText();
+            if (loadText.length() >= 22) loadText.setLength(17); // Magic numbers (length + dots)
+            loadText.append(".");
+            labelMatchInfo.setText(loadText);
+
             batchGroup.enable(labelMatchInfo);
         }
         else if (gmgr.getStartInstant() != null && ChronoUnit.SECONDS.between(gmgr.getStartInstant(), Instant.now()) < START_MAX_DELAY) {
@@ -263,12 +283,14 @@ public class HUD {
         if (gmgr.getGame().isDebug()) {
             fontbook.font("koholint").fontSize(20).fontColor(Color.valueOf("#DFE6D17F"));
             Vector3 camPos = grdr.getGameCam().position;
+            Vector3 camDir = grdr.getGameCam().direction;
             fontbook.formatDraw("loc: (" + truncate(camPos.x,3) + ", " + truncate(camPos.y,3) + ", " + truncate(camPos.z,3) + ")", new Vector2(30, 800), batch);
-            fontbook.formatDraw("fps: " + Gdx.graphics.getFramesPerSecond(), new Vector2(30, 780), batch);
-            fontbook.formatDraw("tps: " + gmgr.getClient().getServerTps(), new Vector2(30, 760), batch);
-            fontbook.formatDraw("server: " + gmgr.getClient().getServerName(), new Vector2(30, 740), batch);
-            fontbook.formatDraw("client: " + gmgr.getClient().getClientName(), new Vector2(30, 720), batch);
-            fontbook.formatDraw("ping: " + gmgr.getClient().getPing(), new Vector2(30, 700), batch);
+            fontbook.formatDraw("look: (" + truncate(camDir.x, 3) + ", " + truncate(camDir.y, 3) + ", " + truncate(camDir.z, 3) + ")", new Vector2(30, 780), batch);
+            fontbook.formatDraw("fps: " + Gdx.graphics.getFramesPerSecond(), new Vector2(30, 760), batch);
+            fontbook.formatDraw("tps: " + gmgr.getClient().getServerTps(), new Vector2(30, 740), batch);
+            fontbook.formatDraw("server: " + gmgr.getClient().getServerName(), new Vector2(30, 720), batch);
+            fontbook.formatDraw("client: " + gmgr.getClient().getClientName(), new Vector2(30, 700), batch);
+            fontbook.formatDraw("ping: " + gmgr.getClient().getPing(), new Vector2(30, 680), batch);
 
             if ((double) Runtime.getRuntime().freeMemory() / Runtime.getRuntime().totalMemory() < 0.05) {
                 System.err.println("<!> Memory warning: " + Runtime.getRuntime().freeMemory() / 1E6f + "mb remaining!");
@@ -276,16 +298,29 @@ public class HUD {
             } else
                 fontbook.fontColor(Color.valueOf("#DFE6D17F"));
 
-            fontbook.formatDraw("mem: " + truncate((Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1E6f, 2) + "mb / " + truncate(Runtime.getRuntime().totalMemory() / 1E6f, 2) + "mb", new Vector2(30, 680), batch);
+            fontbook.formatDraw("mem: " + truncate((Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1E6f, 2) + "mb / " + truncate(Runtime.getRuntime().totalMemory() / 1E6f, 2) + "mb", new Vector2(30, 660), batch);
 
             int mouseX = Gdx.input.getX();
             int mouseY = VIEWPORT_HEIGHT - Gdx.input.getY();
+
+            if (Gdx.input.isKeyJustPressed(Input.Keys.SHIFT_LEFT)) {
+                debugBoxStart = new Vector2(mouseX, mouseY);
+            }
+            if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+                int deltaX = (int) (mouseX - debugBoxStart.x);
+                int deltaY = (int) (mouseY - debugBoxStart.y);
+
+                fontbook.fontColor(Color.valueOf("#ea61aabf"));
+                fontbook.fontSize(15);
+                fontbook.formatDraw(deltaX + ", " + deltaY, new Vector2(debugBoxStart.x + 3f, debugBoxStart.y - 5f), batch);
+                sdr.rectangle(debugBoxStart.x, debugBoxStart.y, mouseX - debugBoxStart.x, mouseY - debugBoxStart.y, Color.valueOf("#ea61aabf"));
+            }
             Gdx.graphics.setSystemCursor(Cursor.SystemCursor.None);
             fontbook.fontColor(Color.valueOf("#82f2d5bf"));
             fontbook.fontSize(15);
             fontbook.formatDraw(mouseX + ", " + mouseY, new Vector2((mouseX > 850) ? mouseX - 65f : mouseX, (mouseY < 200) ? mouseY + 20f : mouseY - 20f), batch);
             fontbook.fontSize(20);
-            fontbook.formatDraw("+", new Vector2(mouseX, mouseY), batch);
+            fontbook.formatDraw("+", new Vector2(mouseX - 2f, mouseY - 2f), batch);
         }
 
         batch.end();
@@ -314,7 +349,7 @@ public class HUD {
 
         LabelStyle labelStyleMi = new LabelStyle();
         labelStyleMi.font = fontbook.getSizedBitmap("tinyislanders", 28, Color.valueOf("#DFE6D17F"));
-        labelMatchInfo = new Label("...", labelStyleMi);
+        labelMatchInfo = new Label("Waiting for players", labelStyleMi);
         labelMatchInfo.setPosition(30, VIEWPORT_HEIGHT - 70);
         batchGroup.add(labelMatchInfo, true);
         //System.out.println(batchGroup);

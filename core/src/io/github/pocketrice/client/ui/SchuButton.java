@@ -69,34 +69,17 @@ public class SchuButton extends TextButton {
         return this;
     }
 
-    public SchuButton(String text, TextButtonStyle tbs, String sfxUp, String sfxDown, String sfxEnter, String sfxExit, float minX, float minY, SchuAssetManager am) {
-        super(text, am.get("skins/onett/skin/terra-mother-ui.json", Skin.class));
-        amgr = am;
-        activeFunc = (objs) -> {};
-        audiobox = amgr.getAudiobox();
-        fontbook = amgr.getFontbook();
-
-        this.setHeight(50);
-        this.setStyle(tbs);
-
-        minX(minX).minY(minY);
-        sfxUp(sfxUp).sfxDown(sfxDown).sfxEnter(sfxEnter).sfxExit(sfxExit); // TODO: lombok @builder instead of this half-baked stuff
-
-        interlerps = new HashSet<>();
-        for (LinkInterlerper lil : interlerps) {
-            lil.setInterlerp(false);
-        }
-
+    public void reattachListener() { // Reattach listener
         this.addListener(new ClickListener() {
             @Override
             public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
-                audiobox.playSfx(sfxDown, 100f);
+                audiobox.playSfx(sfxDown, 10f);
                 return true;
             }
 
             @Override
             public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
-                audiobox.playSfx(sfxUp, 100f);
+                audiobox.playSfx(sfxUp, 10f);
                 activeFunc.accept(activeObjs);
             }
 
@@ -122,7 +105,27 @@ public class SchuButton extends TextButton {
                 Gdx.graphics.setSystemCursor(Cursor.SystemCursor.Hand);
             }
         });
+    }
 
+    public SchuButton(String text, TextButtonStyle tbs, String sfxUp, String sfxDown, String sfxEnter, String sfxExit, float minX, float minY, SchuAssetManager am) {
+        super(text, am.get("skins/onett/skin/terra-mother-ui.json", Skin.class));
+        amgr = am;
+        activeFunc = (objs) -> {};
+        audiobox = amgr.getAudiobox();
+        fontbook = amgr.getFontbook();
+
+        this.setHeight(50);
+        this.setStyle(tbs);
+
+        minX(minX).minY(minY);
+        sfxUp(sfxUp).sfxDown(sfxDown).sfxEnter(sfxEnter).sfxExit(sfxExit); // TODO: lombok @builder instead of this half-baked stuff
+
+        interlerps = new HashSet<>();
+        for (LinkInterlerper lil : interlerps) {
+            lil.setInterlerp(false);
+        }
+
+        reattachListener();
     }
 
     public SchuButton activeFunc(Consumer<List<Object>> func) {

@@ -25,3 +25,11 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+assets/models/env-64.bin
+assets/models/env-64.glb
+assets/models/env64.glb
+assets/models/terrain.glb
+desktop/build/resources/main/models/env-64.bin
+desktop/build/resources/main/models/env-64.glb
+desktop/build/resources/main/models/env64.glb
+desktop/build/resources/main/models/terrain.glb
