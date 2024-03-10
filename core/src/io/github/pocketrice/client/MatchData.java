@@ -47,4 +47,8 @@ public class MatchData {
 
         return isSet;
     }
+
+    public boolean isReady() {
+        return (cons.size() >= 2) ? aReady && bReady : cons.size() == 1 && aReady;
+    }
 }

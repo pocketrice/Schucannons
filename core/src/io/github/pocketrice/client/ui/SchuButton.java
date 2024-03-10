@@ -73,13 +73,13 @@ public class SchuButton extends TextButton {
         this.addListener(new ClickListener() {
             @Override
             public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
-                audiobox.playSfx(sfxDown, 10f);
+                audiobox.playSfx(sfxDown, 2f);
                 return true;
             }
 
             @Override
             public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
-                audiobox.playSfx(sfxUp, 10f);
+                audiobox.playSfx(sfxUp, 2f);
                 activeFunc.accept(activeObjs);
             }
 

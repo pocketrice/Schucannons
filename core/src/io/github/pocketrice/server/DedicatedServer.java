@@ -42,6 +42,7 @@ public class DedicatedServer extends GameServer {
 
     public DedicatedServer(String name, int port) {
         serverName = name;
+        startTime = Instant.now();
         tcpPort = port;
         kryoServer = new Server();
 
@@ -58,7 +59,7 @@ public class DedicatedServer extends GameServer {
         maxClients = 20;
         maxIBufferSize = maxOBufferSize = 10;
 
-        logInfo("Server " + this + " loaded.");
+        logValid("Server " + this + " loaded @ " + startTime);
     }
 
     // This should be done (opt'l) prior to closing a server.
@@ -128,6 +129,7 @@ public class DedicatedServer extends GameServer {
                                 } else {
                                     kryoServer.sendToTCP(con.getID(), new Response("GS_ackReady", null));
                                 }
+                                throw new IllegalArgumentException("Invalid client request — " + rq.getMsg() + "!"); // FIXME
                             }
 
                             case "GC_start" -> {
@@ -143,16 +145,16 @@ public class DedicatedServer extends GameServer {
                                 Match m = findMatchFromCon(con);
                                 MatchData md = clientMap.get(m.getMatchId());
 
-                                logInfo("Connection " + con + " from " + m + " submitted for phase " + m.getPhase());
+                                logInfo(con + " from " + m + " submitted for phase " + m.getPhase());
                                 if (!md.setSel(con, true)) try {
                                     throw new InvalidTypeException("Improper match con order!");
                                 } catch (InvalidTypeException e) {
                                     throw new RuntimeException(e);
                                 }
 
-                                md.setSel(clientMap.get(m.getMatchId()).getCons().stream().filter(c -> !c.equals(con)).findFirst().get(), true); // wut the heck is this? (before you remove yes, this is temporary!!!!!!)
-                                System.out.println(clientMap.get(m.getMatchId()).getCons().stream().filter(c -> !c.equals(con)).findFirst().get());
-                                if (md.isAReady() && md.isBReady()) {
+                                //md.setSel(clientMap.get(m.getMatchId()).getCons().stream().filter(c -> !c.equals(con)).findFirst().get(), true); // wut the heck is this? (before you remove yes, this is temporary!!!!!!)
+
+                                if (md.isReady()) {
                                     try {
                                         sendPhase(m.getMatchId());
                                     } catch (InvalidTypeException e) {
@@ -285,7 +287,7 @@ public class DedicatedServer extends GameServer {
     }
 
     public void sendPlayerList(UUID mid, Connection con) {
-        logInfo("" + mm.findMatch(mid.toString()));
+        logInfo("Confirmed: " + mm.findMatch(mid.toString()));
         kryoServer.sendToTCP(con.getID(), new Response("GS_plList", Arrays.stream(mm.findMatch(mid.toString()).players()).map(p -> p.getPlayerId() + "|" + p.getPlayerName()  + "|" + p.getClass().getSimpleName() + ((p instanceof BotPlayer) ? "|" + ((BotPlayer) p).getDifficulty() + "|" + ((BotPlayer) p).isDummy() : "")).collect(Collectors.joining("&"))));
     }
 

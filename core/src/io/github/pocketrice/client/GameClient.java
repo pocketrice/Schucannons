@@ -1,6 +1,7 @@
 package io.github.pocketrice.client;
 
 import com.esotericsoftware.kryonet.Client;
+import io.github.pocketrice.shared.Orientation;
 import io.github.pocketrice.shared.Response;
 import lombok.Getter;
 import org.apache.commons.lang3.NotImplementedException;
@@ -10,6 +11,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.LinkedList;
 
 import static io.github.pocketrice.shared.AnsiCode.*;
@@ -22,7 +24,7 @@ public abstract class GameClient {
     Client kryoClient;
     Thread kryoThread, updateThread;
     InetSocketAddress serverAddress;
-    Instant pingTime;
+    Instant pingTime, startTime;
     Player self;
 
     String clientName, serverName;
@@ -76,24 +78,35 @@ public abstract class GameClient {
     abstract PlayerTurnPayload constructTurnPayload();
     abstract Response receivePayload(Object obj); // acknowledge received payload?? needed?
 
-    public void log(String msg) {
-        System.out.println("[GC] " + msg);
+    public void log(Object msg) {
+        System.out.println(getLogTime() + " [GC] " + msg);
     }
 
-    public void logErr(String msg) {
-        System.out.println(ANSI_RED + "<!> [GC] " + msg + ANSI_RESET);
+    public void logErr(Object msg) {
+        System.out.println(ANSI_RED + getLogTime() + " <!> [GC] " + msg + ANSI_RESET);
     }
 
-    public void logWarn(String msg) {
-        System.out.println(ANSI_YELLOW + "<?> [GC] " + msg + ANSI_RESET);
+    public void logWarn(Object msg) {
+        System.out.println(ANSI_YELLOW + getLogTime() + " <?> [GC] " + msg + ANSI_RESET);
     }
 
-    public void logInfo(String msg) {
-        System.out.println(ANSI_BLUE + "<-> [GC] " + msg + ANSI_RESET);
+    public void logInfo(Object msg) {
+        System.out.println(ANSI_BLUE + getLogTime() + " <-> [GC] " + msg + ANSI_RESET);
     }
 
-    public void logCon(String msg) {
-        System.out.println(ANSI_PURPLE + "<x> [GC] " + msg + ANSI_RESET);
+    public void logCon(Object msg) {
+        System.out.println(ANSI_PURPLE + getLogTime() + " <x> [GC] " + msg + ANSI_RESET);
+    }
+
+    public void logValid(Object msg) {
+        System.out.println(ANSI_GREEN + getLogTime() + " <✔> [GC] " + msg + ANSI_RESET);
+    }
+
+    public String getLogTime() {
+        long hourSince = ChronoUnit.HOURS.between(startTime, Instant.now());
+        long minSince = ChronoUnit.MINUTES.between(startTime, Instant.now()) - hourSince * 60;
+        long secSince = ChronoUnit.SECONDS.between(startTime, Instant.now()) - minSince * 60;
+        return (fillStr(String.valueOf(minSince), '0', 2) + ":" + fillStr(String.valueOf(secSince), '0', 2));
     }
 
     @Override
@@ -103,5 +116,24 @@ public abstract class GameClient {
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static String fillStr(String str, char c, int len) {
+        return fillStr(Orientation.LEFT, str, c, len);
+    }
+
+    public static String fillStr(Orientation or, String str, char c, int len) {
+        StringBuilder sb = new StringBuilder(str);
+        String fill = Character.toString(c).repeat(len - str.length());
+        switch (or) {
+            case LEFT -> sb.insert(0, fill);
+            case RIGHT -> sb.append(fill);
+            case CENTER -> {
+                sb.insert(0, fill.substring(0, fill.length() / 2));
+                sb.append(fill.substring(fill.length() / 2));
+            }
+        }
+
+        return sb.toString();
     }
 }

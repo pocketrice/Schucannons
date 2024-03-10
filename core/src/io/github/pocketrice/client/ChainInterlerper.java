@@ -7,13 +7,17 @@ import lombok.Getter;
 import org.javatuples.Pair;
 
 import java.util.*;
+import java.util.function.Consumer;
 
 public class ChainInterlerper {
-    Map<Float, Set<ChainKeyframe>> sublerps;
-    SpriteBatch batch;
+    private Map<Float, Set<ChainKeyframe>> sublerps;
+    private SpriteBatch batch;
+    private Consumer<List<Object>> preFunc, postFunc;
+    private List<Object> prePostObjs;
+
     @Getter
-    boolean isForward;
-    float elapsedTime;
+    private boolean isForward;
+    private float elapsedTime;
 
     public ChainInterlerper(SpriteBatch b) {
         this(b, new Pair[]{});
@@ -25,6 +29,21 @@ public class ChainInterlerper {
         for (Pair<Float, ChainKeyframe> kf : keyframes) {
             addSublerp(kf.getValue0(), kf.getValue1());
         }
+    }
+
+    public ChainInterlerper preFunc(Consumer<List<Object>> func) {
+        preFunc = func;
+        return this;
+    }
+
+    public ChainInterlerper postFunc(Consumer<List<Object>> func) {
+        postFunc = func;
+        return this;
+    }
+
+    public ChainInterlerper prePostObjs(List<Object> objs) {
+        prePostObjs = objs;
+        return this;
     }
 
     public void addSublerp(float t, ChainKeyframe ckf) {
@@ -63,6 +82,8 @@ public class ChainInterlerper {
         List<Float> times = sublerps.keySet().stream().toList();
 
         elapsedTime = Math.min(times.get(times.size()-1), Math.max(0, (isForward) ? elapsedTime + deltaStep : elapsedTime - deltaStep));
+        if (preFunc != null && checkTerminated()) preFunc.accept(prePostObjs);
+        else if (postFunc != null && checkTerminated()) postFunc.accept(prePostObjs);
 
          for (float time : times) {
              if ((isForward) ? elapsedTime >= time : elapsedTime <= time) {
@@ -91,5 +112,18 @@ public class ChainInterlerper {
     public void setForward(boolean isForward) {
         this.isForward = isForward;
         getLerps().forEach(l -> l.linkInterlerp.setForward(isForward));
+    }
+
+    public boolean checkTerminated() {
+        List<Float> times = sublerps.keySet().stream().toList();
+        return sublerps.get(times.get((isForward) ? times.size()-1 : 0)).stream().noneMatch(k -> k.linkInterlerp.isInterlerp());
+    }
+
+    public boolean reset() {
+        boolean isChanged = (elapsedTime != 0 || !isForward);
+        elapsedTime = 0;
+        isForward = true;
+
+        return isChanged;
     }
 }

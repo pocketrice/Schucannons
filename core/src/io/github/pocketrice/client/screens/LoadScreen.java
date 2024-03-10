@@ -105,13 +105,13 @@ public class LoadScreen extends ScreenAdapter {
             if (loadSpinner.equals("Loading....")) {
                 loadSpinner = "Loading";
             }
-            loadInfo = (!amgr.isFinished()) ? "Precaching " + amgr.getCurrentLoad()
+            loadInfo = (!amgr.isFinished()) ? "Packing " + amgr.getCurrentLoad()
                     : (!gmgr.isClientConnected()) ? "Connecting to server"
                     : loadFlavour;
             //loadMsg += ("▓".repeat((int) (10 * amgr.getProgress())) + "▒".repeat((int) (10 * (1 - amgr.getProgress()))));
 
-            fontbook.draw("tf2build", 24, loadSpinner, new Vector2(730, 100), batch);
-            fontbook.draw("koholint", 14, loadInfo, new Vector2(730, 70), batch);
+            fontbook.draw("tf2build", 24, loadSpinner, new Vector2(710, 80), batch);
+            fontbook.draw("koholint", 14, loadInfo, new Vector2(710, 50), batch);
             batch.end();
 
             loadDelayFrames++;

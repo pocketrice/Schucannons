@@ -19,10 +19,8 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.utils.Align;
-import io.github.pocketrice.client.Audiobox;
-import io.github.pocketrice.client.Fontbook;
-import io.github.pocketrice.client.SchuAssetManager;
-import io.github.pocketrice.client.SchuGame;
+import io.github.pocketrice.client.*;
+import io.github.pocketrice.client.Flavour.FlavourType;
 import io.github.pocketrice.client.ui.BatchGroup;
 import io.github.pocketrice.client.ui.SchuButton;
 import io.github.pocketrice.client.ui.SchuMenuButton;
@@ -123,7 +121,7 @@ public class MenuScreen extends ScreenAdapter {
                     tblMatchlist.row();
                 });
 
-                System.out.println(ANSI_PURPLE + "btns loaded stupid >.<" + ANSI_RESET);
+                System.out.println(ANSI_PURPLE + "-ˏˋ⋆ btns loaded ya stupid " + Flavour.random(FlavourType.LUVS) + "/ ⋆ˊˎ-" + ANSI_RESET);
                 isUILoaded = true;
             }
         }

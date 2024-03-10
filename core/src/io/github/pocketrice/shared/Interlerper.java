@@ -88,7 +88,7 @@ public class Interlerper<T> {
 
     public double advanceParam() {
         if (isLooping) {
-            t = (isForward) ? t + stepSize : t - stepSize;
+            t = (isForward) ? (t + stepSize) % 1f : (t - stepSize) % 1f;
         } else {
             t = (isForward) ? Math.min(1.0, t + stepSize) : Math.max(0, t - stepSize); // EVIL BUG!!!!11!!! The fabled "min-max flip flop" bug. Total of 2 hours spent debugging. Cheeeeers! :DD
         }

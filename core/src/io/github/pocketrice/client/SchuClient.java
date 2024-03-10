@@ -4,10 +4,8 @@ import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
 import io.github.pocketrice.server.ServerPayload;
-import io.github.pocketrice.shared.KryoInitialiser;
-import io.github.pocketrice.shared.Request;
-import io.github.pocketrice.shared.Response;
-import io.github.pocketrice.shared.ResponseStatus;
+import io.github.pocketrice.shared.*;
+import lombok.Getter;
 import lombok.Setter;
 
 import java.io.IOException;
@@ -19,17 +17,18 @@ import java.time.temporal.ChronoUnit;
 import java.util.LinkedList;
 import java.util.UUID;
 
-import static io.github.pocketrice.client.GameManager.START_MAX_DELAY;
-
 
 public class SchuClient extends GameClient {
-    static final int AWAIT_MAX_SEC = 10;
+    static final int AWAIT_MAX_SEC = 5;
 
     GameManager gmgr;
+    IntervalBuffer intvBuffer;
+    @Getter
+    Interval disconInterv;
     @Setter
     UUID matchId;
     @Setter
-    boolean isMatchJoined, isMatchStarted;
+    boolean isMatchJoined;
 
     public SchuClient(GameManager gm) throws UnknownHostException {
         this(gm, 3074);
@@ -42,6 +41,7 @@ public class SchuClient extends GameClient {
 
     public SchuClient(GameManager gm, String name, int port) {
         clientName = name;
+        startTime = Instant.now();
         tcpPort = port;
         kryoClient = new Client();
         gmgr = gm;
@@ -49,14 +49,14 @@ public class SchuClient extends GameClient {
 
         inBuffer = new LinkedList<>();
         outBuffer = new LinkedList<>();
+        intvBuffer = new IntervalBuffer();
 
         isMatchJoined = false;
-        isMatchStarted = false;
 
         clientRate = calcClientRate();
         maxIBufferSize = maxOBufferSize = 10;
 
-        logInfo("Client " + this + " loaded.");
+        logValid("Client " + this + " loaded @ " + startTime);
     }
 
     public int calcClientRate() {
@@ -118,7 +118,7 @@ public class SchuClient extends GameClient {
 
                             case "GS_phase" -> {
                                 logInfo("Received phase request");
-                                gmgr.receivePhaseSignal(rp.getPayload());
+                                intvBuffer.enqueue(rp.getPayload(), ((pl) -> gmgr.receivePhaseSignal(pl)), gmgr.getBufferInterv());
                             }
 
                             case "GS_ackReady" -> {
@@ -157,25 +157,36 @@ public class SchuClient extends GameClient {
                     sendPayload();
                 }
 
-                if (gmgr.getJoinInstant() != null) {
-                    // Request to server to fill match w/ a bot
-                    if (timeSurpassed(gmgr.getJoinInstant(), AWAIT_MAX_SEC)) {
-                        log(AWAIT_MAX_SEC + " sec elapsed without other player. Requesting bot player...");
-                        gmgr.setJoinInstant(null);
-                        kryoClient.sendTCP(new Request("GC_fillMatch", gmgr.getMatchState().getMatchId().toString()));
-                    }
+                // Request to server to fill match w/ a bot after waiting for joins
+                if (gmgr.getJoinInterv().justEnded()) {
+                    log(AWAIT_MAX_SEC + " sec elapsed without other player. Requesting bot player...");
+                    gmgr.getJoinInterv().unstamp();
+                    kryoClient.sendTCP(new Request("GC_fillMatch", gmgr.getMatchState().getMatchId().toString()));
                 }
 
-                if (gmgr.getStartInstant() != null) {
-                    if (timeSurpassed(gmgr.getStartInstant(), START_MAX_DELAY) && !isMatchStarted) {
-                        isMatchStarted = true;
-                        kryoClient.sendTCP(new Request("GC_start", gmgr.getMatchState().getMatchId().toString()));
-                    }
+                // Request match start after start buffer
+                if (gmgr.getStartInterv().justEnded()) {
+                    kryoClient.sendTCP(new Request("GC_start", gmgr.getMatchState().getMatchId().toString()));
                 }
 
-                if (gmgr.isRunningPhase()) {
-                    if (timeSurpassed(gmgr.getPhaseStartInstant(), gmgr.getPhaseDuration())) {
-                        System.out.println("TIME OVER");
+                // Handle prompt end after phase timeout
+                if (gmgr.getPhaseInterv().justEnded()) {
+                    System.out.println("TIME OVER");
+                }
+
+                intvBuffer.update();
+
+                Interval disconInterv = gmgr.getDisconInterv();
+                if (!kryoClient.isConnected() && !disconInterv.isStamped()) {
+                    disconInterv.stamp();
+                }
+
+                if (disconInterv.justEnded()) {
+                    try {
+                        reconnect();
+                        disconInterv.unstamp();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
                     }
                 }
             }
@@ -200,6 +211,7 @@ public class SchuClient extends GameClient {
     @Override
     public void reconnect() throws IOException {
         kryoClient.reconnect();
+        disconInterv.unstamp();
     }
 
     @Override
@@ -243,9 +255,5 @@ public class SchuClient extends GameClient {
     @Override
     public String toString() {
         return super.toString();
-    }
-
-    public static boolean timeSurpassed(Instant instant, int sec) {
-        return (instant != null && ChronoUnit.SECONDS.between(instant, Instant.now()) > sec);
     }
 }

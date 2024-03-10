@@ -3,17 +3,19 @@ package io.github.pocketrice.client;
 import com.badlogic.gdx.math.Vector3;
 import io.github.pocketrice.client.Match.PhaseType;
 import io.github.pocketrice.server.ServerPayload;
+import io.github.pocketrice.shared.Interval;
 import io.github.pocketrice.shared.Request;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.Instant;
 import java.util.Arrays;
 import java.util.UUID;
 
+import static io.github.pocketrice.client.SchuClient.AWAIT_MAX_SEC;
+
 // Does all the nitty-gritty client stuffs. Unpack server payloads, handle interp...
 public class GameManager {
-    public static final int START_MAX_DELAY = 5;
+    public static final int START_SEC = 2, BUFFER_SEC = 10, RECON_SEC = 20;
 
     private Audiobox audiobox;
     private Fontbook fontbook;
@@ -31,11 +33,11 @@ public class GameManager {
 
 
     @Getter @Setter
-    private boolean isClientConnected, isRunningPhase;
+    private boolean isClientConnected;
     @Getter @Setter
-    private int phaseDuration, phaseDelay;
+    private int phaseDuration;
     @Getter @Setter
-    private Instant phaseStartInstant, joinInstant, startInstant;
+    private Interval phaseInterv, joinInterv, startInterv, bufferInterv, disconInterv;
     @Getter
     private float movePhaseMaxDist;
 
@@ -48,6 +50,11 @@ public class GameManager {
         fontbook.setAmgr(amgr);
         audiobox.setAmgr(amgr);
 
+        phaseInterv = new Interval();
+        joinInterv = new Interval(AWAIT_MAX_SEC);
+        startInterv = new Interval(START_SEC);
+        bufferInterv = new Interval(BUFFER_SEC);
+        disconInterv = new Interval(RECON_SEC);
         isClientConnected = false;
     }
     public void requestMatchlist() {
@@ -121,8 +128,10 @@ public class GameManager {
 
     public void receivePhaseSignal(Object payload) {
         String[] phaseInfo = ((String) payload).split("\\|"); // [ phaseTime, movePhaseMaxDist (opt) ]
+
         phaseDuration = Integer.parseInt(phaseInfo[0]);
-        phaseStartInstant = Instant.now();
+        phaseInterv.setIntervalSec(phaseDuration);
+        phaseInterv.stamp();
         match.advancePhase();
 
         PhaseType phase = match.getPhase();
@@ -149,7 +158,7 @@ public class GameManager {
     }
 
     public void processReadyAck() {
-        joinInstant = Instant.now();
+        joinInterv.stamp();
     }
 
     public Match decompilePayload(ServerPayload sp) { // todo: technically pos should be set by GM every frame — need to figure out.
@@ -178,12 +187,8 @@ public class GameManager {
 
     public void processPrestart() {
         if (match.getState() != Match.GameState.READY) client.logErr("Server dictated ready but game state out-of-sync.");
-        startInstant = Instant.now();
+        startInterv.stamp();
         audiobox.playSfx("aero-seatbelt", 3f);
-    }
-
-    public void requestStart() {
-        client.kryoClient.sendTCP(new Request("GC_start", match.getMatchId().toString()));
     }
 
     public Vector3[] retrievePlayerState(UUID pid) {
@@ -197,7 +202,11 @@ public class GameManager {
     }
 
     public void submitPhase() {
-        isRunningPhase = false;
+        phaseInterv.unstamp();
         client.kryoClient.sendTCP(new Request("GC_submitPhase", null));
+    }
+
+    public String[] queryThreads() {
+        return Thread.getAllStackTraces().keySet().stream().filter(t -> !t.isAlive()).map(Thread::getName).toArray(String[]::new);
     }
 }

@@ -21,15 +21,19 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-public class Batchable {
+public class Batchable implements Comparable<Batchable> {
     Object batchObj;
     Set<LinkInterlerper> interlerps;
     Color color;
     @Getter
-    int x, y;
+    int x, y, zIndex;
     float rot, scl, opacity;
 
     public Batchable(Object obj) {
+        this(obj, 0);
+    }
+
+    public Batchable(Object obj, int z) {
         if (!isBatchable(obj)) {
             System.err.println("Type " + obj.getClass().getSimpleName() + " unable to be batchable!");
         } else {
@@ -37,16 +41,8 @@ public class Batchable {
             interlerps = new HashSet<>();
             loadPresets();
         }
-    }
 
-    public Batchable(Object obj, int x, int y) {
-        this(obj);
-
-        try {
-            this.pos(x, y);
-        } catch (BatchableException e) {
-            System.err.println("Unable to set batchable " + batchObj + " position!");
-        }
+        zIndex = z;
     }
 
     public void draw(SpriteBatch batch) throws BatchableException, IllegalStateException {
@@ -256,7 +252,8 @@ public class Batchable {
         }
         else if (batchObj instanceof Label label) {
             label.setScale(s);
-        } else if (batchObj instanceof BatchGroup bg) {
+        }
+        else if (batchObj instanceof BatchGroup bg) {
             bg.forEach(b -> {
                 try {
                     b.scl(s);
@@ -306,7 +303,8 @@ public class Batchable {
         }
         else if (batchObj instanceof TextButton tb) {
             tb.setTransform(true);
-            color = tb.getStyle().fontColor;
+            Color tbsCol = tb.getStyle().fontColor;
+            color = (tbsCol != null) ? tbsCol : new Color(Color.WHITE);
             x = (int) tb.getX();
             y = (int) tb.getY();
             rot = tb.getRotation();
@@ -326,6 +324,8 @@ public class Batchable {
         }
         else if (batchObj instanceof Label label) {
             color = label.getStyle().fontColor;
+            Color lsCol = label.getStyle().fontColor;
+            color = (lsCol != null) ? lsCol : new Color(Color.WHITE);
             x = (int) label.getX();
             y = (int) label.getY();
             rot = label.getRotation();
@@ -336,6 +336,16 @@ public class Batchable {
     @Override
     public boolean equals(Object obj) {
         return (obj instanceof Batchable other) ? this.batchObj.equals(other.batchObj) : this.batchObj.equals(obj);
+    }
+
+    @Override
+    public String toString() {
+        return "Batchable@" + Integer.toHexString(hashCode()) + "-" + batchObj.toString();
+    }
+
+    @Override
+    public int compareTo(Batchable other) {
+        return this.zIndex - other.zIndex;
     }
 
     public static boolean isBatchable(Object obj) {
@@ -349,10 +359,5 @@ public class Batchable {
         ROTATION,
         SCALE
        // FONT_SIZE
-    }
-
-    @Override
-    public String toString() {
-        return "Batchable@" + Integer.toHexString(hashCode()) + "-" + batchObj.toString();
     }
 }

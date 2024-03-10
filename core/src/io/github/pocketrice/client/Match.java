@@ -233,7 +233,6 @@ public class Match implements Comparable<Match> {
 
     public void advancePhase() {
         int newPhase = (phase.val + 1 > PhaseType.ENDED.val) ? 0 : phase.val + 1;
-        System.out.println(phase + " -> " + newPhase);
         phase = PhaseType.get(newPhase);
     }
 

@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static io.github.pocketrice.client.SchuGame.getGlobalAmgr;
+import static io.github.pocketrice.shared.AnsiCode.*;
 
 // TODO: implement TuningFork's custom sound effects.
 public class Audiobox {
@@ -85,7 +86,7 @@ public class Audiobox {
             }
         }
 
-        System.out.println("Loaded all audio from assets/audio!");
+        System.out.println(ANSI_BLUE + "[✧˖°] Loaded all audio from assets/audio!" + ANSI_RESET);
     }
 
     public static Audiobox of(String... sfxs) {

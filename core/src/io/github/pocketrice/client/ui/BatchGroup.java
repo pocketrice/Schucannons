@@ -25,11 +25,12 @@ public class BatchGroup extends ArrayList<Batchable> {
 
     public void draw(SpriteBatch batch) {
         step();
+        List<Batchable> sortedBa = this.stream().sorted().toList(); // Order based on Z-index priority
 
-        for (int i = 0; i < areEnabled.size(); i++) {
-            if (areEnabled.get(i)) {
+        for (Batchable ba : sortedBa) {
+            if (areEnabled.get(this.indexOf(ba))) { // Get corresponding isReady to items in z-index-sorted list.
                 try {
-                    this.get(i).draw(batch);
+                    ba.draw(batch);
                 } catch (BatchableException e) {
                     throw new RuntimeException(e);
                 }
@@ -70,7 +71,7 @@ public class BatchGroup extends ArrayList<Batchable> {
         return add(ba, true);
     }
 
-    public boolean add(Object obj, boolean isEnabled) { // superclass add() requires Batchable, which is not great since goal of helper class is to allow for adding both the wrapper and the obj.
+    public boolean add(Object obj, boolean isEnabled) { // superclass add() requires Batchable, which is not great since goal of helper class is to allow for adding both the wrapper and the obj. Also, custom implementation can allow for pruning dupes.
         boolean isAdded = false;
         if (!this.contains(obj)) {
             areEnabled.add(isEnabled);
@@ -78,6 +79,10 @@ public class BatchGroup extends ArrayList<Batchable> {
         }
 
         return isAdded;
+    }
+
+    public boolean add(Object obj, int zIndex, boolean isEnabled) {
+        return add(new Batchable(obj, zIndex), isEnabled);
     }
 
     @Override
@@ -143,9 +148,9 @@ public class BatchGroup extends ArrayList<Batchable> {
     public String toString() {
         StringBuilder res = new StringBuilder("{");
 
-        for (int i = 0; i < areEnabled.size(); i++) {
-            res.append("[").append(this.get(i)).append("=").append(areEnabled.get(i)).append("]");
-            if (i != areEnabled.size() - 1) res.append(", ");
+        for (int i = 0; i < this.size(); i++) {
+            res.append("[").append(this.get(i)).append("=").append(areEnabled.get(i)).append(", z=").append(this.get(i).zIndex).append("]");
+            if (i != this.size() - 1) res.append(", ");
         }
 
         res.append("}");

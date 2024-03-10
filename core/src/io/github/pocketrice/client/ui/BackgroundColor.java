@@ -1,13 +1,14 @@
 package io.github.pocketrice.client.ui;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Batch;
 import com.badlogic.gdx.graphics.g2d.Sprite;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.utils.Drawable;
+import io.github.pocketrice.client.SchuAssetManager;
+import io.github.pocketrice.client.SchuGame;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.lang3.NotImplementedException;
@@ -22,22 +23,21 @@ public class BackgroundColor implements Drawable {
 	private boolean isFillParent;
 
 	@Getter @Setter
-	private FileHandle filename;
 	private Texture texture;
 	private TextureRegion textureRegion;
 	private Sprite sprite;
 	private Color color;
 	
-	public BackgroundColor(FileHandle filename) {
-		this(filename, 0.0f, 0.0f, 0.0f, 0.0f);
+	public BackgroundColor(Texture t) {
+		this(t, 0.0f, 0.0f, 0.0f, 0.0f);
 	}
 	
-	public BackgroundColor(FileHandle filename, float x, float y) {
-		this(filename, x, y, 0.0f, 0.0f);
+	public BackgroundColor(Texture t, float x, float y) {
+		this(t, x, y, 0.0f, 0.0f);
 	}
 	
-	public BackgroundColor(FileHandle filename, float x, float y, float width, float height) {
-		setFilename(filename);
+	public BackgroundColor(Texture t, float x, float y, float width, float height) {
+		setTexture(t);
 		setPosition(x,y);
 		if (width < 0.0f || height < 0.0f)
 			setSize();	// width = 0.0f; height = 0.0f;
@@ -52,20 +52,12 @@ public class BackgroundColor implements Drawable {
 		}
 		isFillParent = true;
 	}
-
-	private void setTexture() {
-		if (texture != null)
-			texture.dispose();
-		texture = new Texture(filename);
-	}
 	
 	private void setTextureRegion() {
 		textureRegion = new TextureRegion(texture, (int) getWidth(), (int) getHeight());
 	}
 	
 	private void setSprite() {
-		if (texture == null)
-			setTexture();
 		setTextureRegion();
 		sprite = new Sprite(textureRegion);
 		setSpriteColor();
@@ -184,8 +176,9 @@ public class BackgroundColor implements Drawable {
 	}
 
 	public static BackgroundColor generateSolidBg(Color col) {
-		if (!Gdx.files.internal("textures/bgc.png").exists()) System.err.println("Error: Solid background default texture not in project!");
-		BackgroundColor bgc = new BackgroundColor(Gdx.files.internal("textures/bgc.png"));
+		SchuAssetManager amgr = SchuGame.getGlobalAmgr();
+		if (!amgr.aliasedContains("main.atlas")) System.err.println("Error: Solid background default texture not in project!");
+		BackgroundColor bgc = new BackgroundColor(amgr.aliasedGet("main.atlas", TextureAtlas.class).findRegion("1px").getTexture());
 		bgc.setColor(col);
 		return bgc;
 	}

@@ -57,6 +57,9 @@ public class SchuAssetManager extends AssetManager {
         return this.get(aliases.get(alias), type);
     }
 
+    public boolean aliasedContains(String alias) {
+        return aliases.containsKey(alias);
+    }
     public synchronized <T> void aliasedLoad(String filename, String alias, Class<T> type) {
         this.load(filename, type);
         aliases.put(alias, filename);
