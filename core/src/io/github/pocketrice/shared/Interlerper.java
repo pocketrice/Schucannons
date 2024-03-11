@@ -34,6 +34,11 @@ public class Interlerper<T> {
         stepSize = ss;
     }
 
+    public Interlerper(T start, T end, EasingFunction e, long scount) { // Compute so it finishes in # of steps!
+        this(start, end, e, 0.0); // Use temp ss since constructors must be first-line :(
+        stepSize = computeStepSize(scount); // ...now it's a-ok.
+    }
+
 
     public Interlerper<T> from(T val) {
         startVal = val;
@@ -99,5 +104,13 @@ public class Interlerper<T> {
     public T advance() {
         advanceParam();
         return interlerp(t, easing);
+    }
+
+    public long remainingSteps() { // get # of REMAINING steps needed to finish interlerp... not total. Just query at beginning of interlerp I dunno :)
+        return (long) ((1.0 - t) / stepSize);  // Formula is [remaining "t"] / stepSize. Clamping to 0 is already predone :D
+    }
+
+    public double computeStepSize(long steps) { // Compute step size needed to complete interlerp in given step count (effectively, ensuring interlerp time taken is a-ok, but the time scales)
+        return (1.0 - t) / steps; // A rewriting of remainingSteps formula, solving for SS instead of TS.
     }
 }

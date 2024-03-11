@@ -1,6 +1,10 @@
 package io.github.pocketrice.shared;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
 // Ansi codes are escape codes that can be appended to strings to apply colors to any console prints
+@AllArgsConstructor
 public enum AnsiCode {
     ANSI_BLACK(0, "\u001B[30m"),
     ANSI_RED(1, "\u001B[31m"),
@@ -12,17 +16,9 @@ public enum AnsiCode {
     ANSI_WHITE(7, "\u001B[37m"),
     ANSI_RESET(8, "\u001B[0m");
 
-    private final int value;
-    private final String code;
-
-    AnsiCode(int value, String code) {
-        this.value = value;
-        this.code = code;
-    }
-
-    public int getValue() {
-        return value;
-    }
+    @Getter
+    final int value;
+    final String code;
 
     // Allows for using AnsiCodes just as they were used when they were declared as static constants within the Class; allows for compat with previous projects (only need to import AnsiCode statically).
     @Override

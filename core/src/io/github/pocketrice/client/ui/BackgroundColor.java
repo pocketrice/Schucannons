@@ -176,7 +176,7 @@ public class BackgroundColor implements Drawable {
 	}
 
 	public static BackgroundColor generateSolidBg(Color col) {
-		SchuAssetManager amgr = SchuGame.getGlobalAmgr();
+		SchuAssetManager amgr = SchuGame.globalAmgr();
 		if (!amgr.aliasedContains("main.atlas")) System.err.println("Error: Solid background default texture not in project!");
 		BackgroundColor bgc = new BackgroundColor(amgr.aliasedGet("main.atlas", TextureAtlas.class).findRegion("1px").getTexture());
 		bgc.setColor(col);

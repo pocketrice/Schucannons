@@ -1,6 +1,7 @@
 package io.github.pocketrice.client;
 
 import com.badlogic.gdx.math.Vector3;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -207,9 +208,9 @@ public class Match implements Comparable<Match> {
         return System.currentTimeMillis();
     }
 
-    public static float truncate(float value, int mantissa) // <+> APM
-    {
-        return (float) BigDecimal.valueOf(value).setScale(mantissa, RoundingMode.HALF_EVEN).doubleValue();
+    public static float truncate(float value, int mantissa) { // <+> APM
+        float truncVal = BigDecimal.valueOf(value).setScale(mantissa, RoundingMode.HALF_EVEN).floatValue();
+        return (mantissa == 0) ? (int) truncVal : truncVal;
     }
 
     public static Vector3 truncVec(Vector3 vec, int mantissa) {
@@ -237,37 +238,23 @@ public class Match implements Comparable<Match> {
     }
 
 
+    @AllArgsConstructor
     public enum PlayerType {
         INVALID(-1),
         CURRENT(0),
         OPPONENT(1),
         SPECTATOR(2);
 
-
-        PlayerType(int i) {
-            val = i;
-        }
-
         static PlayerType get(int i) {
-            switch (i) {
-                case 0 -> {
-                    return CURRENT;
-                }
-                case 1 -> {
-                    return OPPONENT;
-                }
-                case 2 -> {
-                    return SPECTATOR;
-                }
-                default -> {
-                    return INVALID;
-                }
-            }
+            int maxIndex = PlayerType.values().length - 1;
+            int wrappedIndex = (i > maxIndex) ? 0 : (i < 0) ? maxIndex : i;
+            return Arrays.stream(PlayerType.values()).filter(p -> p.val == wrappedIndex).findFirst().get();
         }
 
         final int val;
     }
 
+    @AllArgsConstructor
     public enum GameState {
         INVALID(-1),
         AWAIT(0),
@@ -275,33 +262,16 @@ public class Match implements Comparable<Match> {
         RUNNING(2),
         ENDED(3);
 
-        GameState(int i) {
-            val = i;
-        }
-
         static GameState get(int i) {
-            switch (i) {
-                case 0 -> {
-                    return AWAIT;
-                }
-                case 1 -> {
-                    return READY;
-                }
-                case 2 -> {
-                    return RUNNING;
-                }
-                case 3 -> {
-                    return ENDED;
-                }
-                default -> {
-                    return INVALID;
-                }
-            }
+            int maxIndex = GameState.values().length - 1;
+            int wrappedIndex = (i > maxIndex) ? 0 : (i < 0) ? maxIndex : i;
+            return Arrays.stream(GameState.values()).filter(g -> g.val == wrappedIndex).findFirst().get();
         }
 
         public final int val;
     }
 
+    @AllArgsConstructor
     public enum PhaseType { // bad order?
         INVALID(-1),
         NONE(0),
@@ -311,33 +281,12 @@ public class Match implements Comparable<Match> {
         ENDED(4);
 
 
-        PhaseType(int i) {
-            val = i;
-        }
-
         static PhaseType get(int i) {
-            switch (i) {
-                case 0 -> {
-                    return NONE;
-                }
-                case 1 -> {
-                    return MOVE;
-                }
-                case 2 -> {
-                    return PROMPT;
-                }
-                case 3 -> {
-                    return SIM;
-                }
-                case 4 -> {
-                    return ENDED;
-                }
-                default -> {
-                    return INVALID;
-                }
-            }
+            int maxIndex = PhaseType.values().length - 1;
+            int wrappedIndex = (i > maxIndex) ? 0 : (i < 0) ? maxIndex : i;
+            return Arrays.stream(PhaseType.values()).filter(p -> p.val == wrappedIndex).findFirst().get();
         }
 
-        public final int val;
+        final int val;
     }
 }

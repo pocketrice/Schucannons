@@ -11,7 +11,6 @@ import java.util.List;
 public class BatchGroup extends ArrayList<Batchable> {
     List<Boolean> areEnabled;
 
-
     public BatchGroup() {
         this(new Batchable[]{});
     }
@@ -49,10 +48,8 @@ public class BatchGroup extends ArrayList<Batchable> {
     @Override
     public boolean remove(Object obj) {
         int prevSize = this.size();
-        this.stream().filter(b -> b.equals(obj)).forEach(b -> {
-            areEnabled.remove(this.indexOf(b));
-            this.remove(b);
-        });
+        areEnabled.remove(this.indexOf(obj));
+        super.remove(obj);
         return this.size() != prevSize;
     }
 

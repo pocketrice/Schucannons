@@ -5,7 +5,6 @@ import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
 import io.github.pocketrice.server.ServerPayload;
 import io.github.pocketrice.shared.*;
-import lombok.Getter;
 import lombok.Setter;
 
 import java.io.IOException;
@@ -23,8 +22,6 @@ public class SchuClient extends GameClient {
 
     GameManager gmgr;
     IntervalBuffer intvBuffer;
-    @Getter
-    Interval disconInterv;
     @Setter
     UUID matchId;
     @Setter
@@ -177,17 +174,14 @@ public class SchuClient extends GameClient {
                 intvBuffer.update();
 
                 Interval disconInterv = gmgr.getDisconInterv();
-                if (!kryoClient.isConnected() && !disconInterv.isStamped()) {
+                if (!kryoClient.isConnected() && !disconInterv.observe()) {
                     disconInterv.stamp();
                 }
 
                 if (disconInterv.justEnded()) {
                     try {
                         reconnect();
-                        disconInterv.unstamp();
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
+                    } catch (IOException ignored) {}
                 }
             }
         });
@@ -211,7 +205,7 @@ public class SchuClient extends GameClient {
     @Override
     public void reconnect() throws IOException {
         kryoClient.reconnect();
-        disconInterv.unstamp();
+        gmgr.getDisconInterv().unstamp();
     }
 
     @Override

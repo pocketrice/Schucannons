@@ -11,6 +11,7 @@ import com.badlogic.gdx.graphics.g2d.freetype.FreetypeFontLoader.FreeTypeFontLoa
 import com.badlogic.gdx.math.Vector2;
 import io.github.pocketrice.shared.Orientation;
 import lombok.Getter;
+import lombok.Setter;
 import org.javatuples.Quintet;
 
 import java.util.ArrayList;
@@ -30,6 +31,7 @@ public class Fontbook {
     Map<Integer, List<String>> bmfCache;
     @Getter
     Quintet<String, Integer, Color, Vector2, Float> presetSettings;
+    @Setter
     SchuAssetManager amgr;
     boolean isCoverAware;
     float textCover;
@@ -40,10 +42,6 @@ public class Fontbook {
         presetSettings = new Quintet<>("tinyislanders", 18, Color.WHITE, new Vector2(20f, 60f), 20f);
         isCoverAware = false;
         textCover = 0;
-    }
-
-    public void setAmgr(SchuAssetManager am) {
-        amgr = am;
     }
 
     public BitmapFont getSizedBitmap(String name, int fontSize) {
@@ -72,22 +70,22 @@ public class Fontbook {
 
     // .bind is deprecated
 
-    public void draw(String font, int fontSize, CharSequence text, Vector2 loc, SpriteBatch batch) {
+    public void draw(String font, int fontSize, Object text, Vector2 loc, SpriteBatch batch) {
         BitmapFont bmf = getSizedBitmap(font, fontSize);
         Color oldCol = bmf.getColor();
         bmf.setColor(presetSettings.getValue2());
-        bmf.draw(batch, text, loc.x, loc.y);
+        bmf.draw(batch, text.toString(), loc.x, loc.y);
         bmf.setColor(oldCol);
     }
 
-    public void draw(CharSequence text, Vector2 loc, SpriteBatch batch) {
-        draw(presetSettings.getValue0(), presetSettings.getValue1(), text, loc, batch);
+    public void draw(Object text, Vector2 loc, SpriteBatch batch) {
+        draw(presetSettings.getValue0(), presetSettings.getValue1(), text.toString(), loc, batch);
     }
 
-    public void formatDraw(String font, int fontSize, Color color, CharSequence text, Orientation or, float padX, float padY, SpriteBatch batch) {
+    public void formatDraw(String font, int fontSize, Color color, Object text, Orientation or, float padX, float padY, SpriteBatch batch) {
         BitmapFont bmf = getSizedBitmap(font, fontSize);
         GlyphLayout gl = new GlyphLayout();
-        gl.setText(bmf, text);
+        gl.setText(bmf, text.toString());
         Vector2 loc;
 
         float adjPadY = padY + ((isCoverAware) ? textCover : 0);
@@ -95,56 +93,48 @@ public class Fontbook {
         switch (or) {
             case TOP_LEFT -> loc = new Vector2(padX, VIEWPORT_HEIGHT - adjPadY);
 
-            case TOP_CENTER -> loc = new Vector2(VIEWPORT_WIDTH / 2f, VIEWPORT_HEIGHT - adjPadY);
+            case TOP -> loc = new Vector2(VIEWPORT_WIDTH / 2f, VIEWPORT_HEIGHT - adjPadY);
 
             case TOP_RIGHT -> loc = new Vector2(VIEWPORT_WIDTH - gl.width - padX, VIEWPORT_HEIGHT - adjPadY);
 
-            case MID_LEFT -> loc = new Vector2(padX, VIEWPORT_HEIGHT / 2f);
+            case LEFT -> loc = new Vector2(padX, VIEWPORT_HEIGHT / 2f);
 
-            case MID_CENTER -> loc = new Vector2(VIEWPORT_WIDTH / 2f, VIEWPORT_HEIGHT / 2f);
+            case CENTER -> loc = new Vector2(VIEWPORT_WIDTH / 2f, VIEWPORT_HEIGHT / 2f);
 
-            case MID_RIGHT -> loc = new Vector2(VIEWPORT_WIDTH - gl.width - padX, VIEWPORT_HEIGHT / 2f);
+            case RIGHT -> loc = new Vector2(VIEWPORT_WIDTH - gl.width - padX, VIEWPORT_HEIGHT / 2f);
 
             case BOTTOM_LEFT -> loc = new Vector2(padX, adjPadY);
 
-            case BOTTOM_CENTER -> loc = new Vector2(VIEWPORT_WIDTH / 2f, adjPadY);
+            case BOTTOM -> loc = new Vector2(VIEWPORT_WIDTH / 2f, adjPadY);
 
             case BOTTOM_RIGHT -> loc = new Vector2(VIEWPORT_WIDTH - gl.width - padX, adjPadY);
 
             default -> loc = Vector2.Zero;
         }
 
-        formatDraw(font, fontSize, color, text, loc, batch);
+        formatDraw(font, fontSize, color, text.toString(), loc, batch);
 
         if (isCoverAware) {
-            float cover = presetSettings.getValue4();
-            textCover += ((cover > 0) ? gl.height : -gl.height) + presetSettings.getValue4(); // Use cover's polarity to determine whether to align downwards or upwards.
+            textCover += gl.height + presetSettings.getValue4();
         }
     }
 
-    public void formatDraw(String font, int fontSize, Color color, CharSequence text, Vector2 loc, SpriteBatch batch) {
+    public void formatDraw(String font, int fontSize, Color color, Object text, Vector2 loc, SpriteBatch batch) { // No cover-aware b/c orientation-based format draw relies on this.
         BitmapFont bmf = getSizedBitmap(font, fontSize);
         GlyphLayout gl = new GlyphLayout();
-        gl.setText(bmf, text);
-
-        float adjY = loc.y + ((isCoverAware) ? textCover : 0);
+        gl.setText(bmf, text.toString());
 
         Color oldCol = bmf.getColor();
         bmf.setColor(color);
-        bmf.draw(batch, text, loc.x, adjY);
+        bmf.draw(batch, text.toString(), loc.x, loc.y);
         bmf.setColor(oldCol); // Set color back to default
-
-        if (isCoverAware) {
-            float cover = presetSettings.getValue4();
-            textCover += ((cover > 0) ? gl.height : -gl.height) + cover; // Use cover's polarity to determine whether to align downwards or upwards.
-        }
     }
 
-    public void formatDraw(CharSequence text, Vector2 loc, SpriteBatch batch) {
+    public void formatDraw(Object text, Vector2 loc, SpriteBatch batch) {
         formatDraw(presetSettings.getValue0(), presetSettings.getValue1(), presetSettings.getValue2(), text, loc, batch);
     }
 
-    public void formatDraw(CharSequence text, Orientation or, SpriteBatch batch) {
+    public void formatDraw(Object text, Orientation or, SpriteBatch batch) {
         formatDraw(presetSettings.getValue0(), presetSettings.getValue1(), presetSettings.getValue2(), text, or, presetSettings.getValue3().x, presetSettings.getValue3().y, batch);
     }
 
@@ -162,7 +152,7 @@ public class Fontbook {
 
     // --------------- BUILDER METHODS -----------------
     public Fontbook reset() {
-        presetSettings = new Quintet<>("tinyislanders", 18, Color.WHITE, new Vector2(20f, 60f), 20f);
+        presetSettings = new Quintet<>("tinyislanders", 18, Color.WHITE, new Vector2(20f, 60f), 5f);
         return this;
     }
 
@@ -262,14 +252,14 @@ public class Fontbook {
 
     public static Fontbook of(String... fontFiles) {
         Fontbook fb = new Fontbook();
-        fb.amgr = getGlobalAmgr();
+        fb.amgr = globalAmgr();
         fb.loadFonts(fontFiles);
 
         return fb;
     }
 
     public static BitmapFont quickFont(String font, int fontSize) {
-        Fontbook fb = getGlobalAmgr().getFontbook();
+        Fontbook fb = globalAmgr().getFontbook();
 
         return fb.getSizedBitmap(font, fontSize);
     }

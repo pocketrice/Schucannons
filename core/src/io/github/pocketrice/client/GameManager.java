@@ -25,7 +25,6 @@ public class GameManager {
     private SchuAssetManager amgr;
     @Setter
     private GameRenderer grdr;
-    @Getter
     private SchuGame game;
     private Match match; // This is a local-only compilation of ServerPayloads — for ease of storage.
     @Getter
@@ -207,6 +206,6 @@ public class GameManager {
     }
 
     public String[] queryThreads() {
-        return Thread.getAllStackTraces().keySet().stream().filter(t -> !t.isAlive()).map(Thread::getName).toArray(String[]::new);
+       return Thread.getAllStackTraces().keySet().stream().filter(t -> !t.isAlive()).map(Thread::getName).toArray(String[]::new);
     }
 }

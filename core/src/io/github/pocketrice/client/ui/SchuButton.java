@@ -14,6 +14,7 @@ import io.github.pocketrice.client.Fontbook;
 import io.github.pocketrice.client.SchuAssetManager;
 import io.github.pocketrice.client.ui.Batchable.InterlerpPreset;
 import io.github.pocketrice.shared.EasingFunction;
+import io.github.pocketrice.shared.Interlerper;
 import io.github.pocketrice.shared.LinkInterlerper;
 import lombok.Getter;
 
@@ -24,7 +25,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 // All-purpose UI button
-public class SchuButton extends TextButton {
+public class SchuButton extends TextButton implements Focusable {
     SchuAssetManager amgr;
     Audiobox audiobox;
     Fontbook fontbook;
@@ -169,6 +170,25 @@ public class SchuButton extends TextButton {
 
     public void step() {
         interlerps.forEach(LinkInterlerper::step);
+    }
+
+    @Override
+    public void handleFocus(boolean isFocused) {
+        InputEvent ie = new InputEvent();
+        ie.setType((isFocused) ? InputEvent.Type.enter : InputEvent.Type.exit);
+        this.fire(ie);
+    }
+
+    @Override
+    public void handleSel() {
+        InputEvent ie = new InputEvent();
+        ie.setType(InputEvent.Type.touchUp);
+        this.fire(ie);
+    }
+
+    @Override
+    public boolean isStable() {
+        return interlerps.stream().noneMatch(Interlerper::isInterlerp);
     }
 
     public static TextButtonStyle generateStyle(String font, Color color, int fs) {

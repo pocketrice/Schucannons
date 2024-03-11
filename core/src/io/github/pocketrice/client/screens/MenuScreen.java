@@ -22,6 +22,7 @@ import com.badlogic.gdx.utils.Align;
 import io.github.pocketrice.client.*;
 import io.github.pocketrice.client.Flavour.FlavourType;
 import io.github.pocketrice.client.ui.BatchGroup;
+import io.github.pocketrice.client.ui.FocusableGroup;
 import io.github.pocketrice.client.ui.SchuButton;
 import io.github.pocketrice.client.ui.SchuMenuButton;
 import io.github.pocketrice.shared.LinkInterlerper;
@@ -50,9 +51,11 @@ public class MenuScreen extends ScreenAdapter {
     LinkInterlerper<Float, BatchGroup> interlerpTitleFade;
     LinkInterlerper<Float, BatchGroup> interlerpMenuFade;
 
+    FocusableGroup focMatchlist;
     List<SchuMenuButton> schubs;
     Table tblMatchlist;
-    boolean isUILoaded; // TEMP
+
+    boolean isUILoaded; // Temporary(?)
 
     public MenuScreen(SchuGame sg) {
         game = sg;
@@ -82,7 +85,8 @@ public class MenuScreen extends ScreenAdapter {
 
         tblMatchlist = new Table().left();
         tblMatchlist.setPosition(70, 520);
-       // sprBatchGroup.add(tblMatchlist, true); // todo: fix loadPresets
+        focMatchlist = new FocusableGroup();
+        focMatchlist.enable();
         stage = new Stage();
         stage.addActor(tblMatchlist);
 
@@ -106,6 +110,9 @@ public class MenuScreen extends ScreenAdapter {
         modelBatch.render(panoMi, env);
         modelBatch.end();
         sprBatch.begin();
+
+        focMatchlist.update();
+
         fontbook.draw("tinyislanders", 40, "Select a match...", new Vector2(50,700), sprBatch);
         if (game.getGmgr().getMatchlist() == null) { // todo: only request once
             game.getGmgr().requestMatchlist();
@@ -119,9 +126,10 @@ public class MenuScreen extends ScreenAdapter {
                     tblMatchlist.add(schub).align(Align.left).padBottom(9f).padRight(20f);
                     tblMatchlist.add(schub.getLabelMatchPeek()).align(Align.left).padBottom(9f).padLeft(10);
                     tblMatchlist.row();
+                    focMatchlist.add(schub);
                 });
 
-                System.out.println(ANSI_PURPLE + "-ˏˋ⋆ btns loaded ya stupid " + Flavour.random(FlavourType.LUVS) + "/ ⋆ˊˎ-" + ANSI_RESET);
+                System.out.println(ANSI_PURPLE + "\n\n-ˏˋ⋆ btns loaded ya luv " + Flavour.random(FlavourType.LUVS) + "/ ⋆ˊˎ-\n\n" + ANSI_RESET);
                 isUILoaded = true;
             }
         }
@@ -134,11 +142,6 @@ public class MenuScreen extends ScreenAdapter {
         tblMatchlist.draw(sprBatch, 1f);
         sprBatch.end();
         stage.act();
-    }
-
-    @Override
-    public void show() {
-
     }
 
     @Override

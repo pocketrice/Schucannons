@@ -19,6 +19,7 @@ import io.github.pocketrice.client.*;
 import io.github.pocketrice.client.Match.PhaseType;
 import io.github.pocketrice.client.ui.Batchable.InterlerpPreset;
 import io.github.pocketrice.shared.*;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import org.javatuples.Pair;
@@ -254,13 +255,13 @@ public class HUD {
 
         float disconCover = 0; // Cannot use isCoverAware due to overlap w/ debug. Notice that coverPad is still set; verbose but good to have.
         if (gmgr.getDisconInterv().isStamped()) {
-            fontbook.reset().font("koholint").fontSize(14).fontColor(Color.valueOf("#dfd1d53f")).padY(30f);
+            fontbook.reset().font("koholint").fontSize(16).fontColor(Color.valueOf("#dfd1d53f")).padY(30f);
             fontbook.formatDraw("Client disconnected... retrying in " + gmgr.getDisconInterv().humanDelta(true) + "s", Orientation.TOP_RIGHT, batch);
             disconCover += fontbook.getCover() + 20f;
         }
 
-        if (gmgr.getGame().isDebug()) {
-            fontbook.reset().font("koholint").fontSize(20).fontColor(Color.valueOf("#DFE6D17F")).padX(30f).padY(160f).coverPad(-30f); // original debug coords = (30,800). VIEWPORT_HEIGHT - 800 for actual pad.
+        if (SchuGame.globalGame().isDebug()) {
+            fontbook.reset().font("koholint").fontSize(20).fontColor(Color.valueOf("#DFE6D17F")).padX(30f).padY(80f).coverPad(8f); // original debug coords = (30,800). VIEWPORT_HEIGHT - 800 for actual pad.
             Vector3 camPos = grdr.getGameCam().position;
             Vector3 camDir = grdr.getGameCam().direction;
             fontbook.toggleCoverAware(true);
@@ -270,7 +271,7 @@ public class HUD {
             fontbook.formatDraw("tps: " + gmgr.getClient().getServerTps(), Orientation.TOP_LEFT, batch);
             fontbook.formatDraw("server: " + gmgr.getClient().getServerName(), Orientation.TOP_LEFT, batch);
             fontbook.formatDraw("client: " + gmgr.getClient().getClientName(), Orientation.TOP_LEFT, batch);
-            fontbook.formatDraw("ping: " + gmgr.getClient().getPing(),Orientation.TOP_LEFT, batch);
+            fontbook.formatDraw("ping: " + gmgr.getClient().getPing(), Orientation.TOP_LEFT, batch);
 
             if ((double) Runtime.getRuntime().freeMemory() / Runtime.getRuntime().totalMemory() < 0.05) {
                 System.err.println("<!> Memory warning: " + Runtime.getRuntime().freeMemory() / 1E6f + "mb remaining!");
@@ -283,7 +284,7 @@ public class HUD {
 
             fontbook.toggleCoverAware(true);
             String[] deadThreads = gmgr.queryThreads();
-            fontbook.reset().font("koholint").fontSize(16).fontColor(Color.valueOf("#fbacc04f")).padY(disconCover).coverPad(-20f);
+            fontbook.reset().font("koholint").fontSize(16).fontColor(Color.valueOf("#fbacc04f")).padY(disconCover).coverPad(5f);
             for (String dt : deadThreads) {
                 fontbook.formatDraw("Thread " + dt + " dead!", Orientation.TOP_RIGHT, batch);
             }
@@ -293,9 +294,9 @@ public class HUD {
             int mouseY = VIEWPORT_HEIGHT - Gdx.input.getY();
 
             if (Gdx.input.isKeyJustPressed(Input.Keys.SHIFT_LEFT)) {
-                debugBoxStart = new Vector2(mouseX, mouseY);
+                debugBoxStart = (debugBoxStart != null) ? null : new Vector2(mouseX, mouseY);
             }
-            if (Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) {
+            if (debugBoxStart != null) {
                 int deltaX = (int) (mouseX - debugBoxStart.x);
                 int deltaY = (int) (mouseY - debugBoxStart.y);
 
@@ -334,7 +335,7 @@ public class HUD {
         } else if (!phaseInterv.isFlagged()) {
             hudPromptState = (phaseInterv.observe()) ? HUDState.ACTIVE : HUDState.HIDDEN;
         }
-        System.out.println(hudPromptState);
+        //System.out.println(hudPromptState);
     }
 
     public void renderPrompt() { // To be called anytime a part of prompt is rendered.
@@ -344,7 +345,7 @@ public class HUD {
         fontbook.reset().font("benzin").fontSize(24).fontColor(Color.valueOf("#b8b1f22f"));
         fontbook.formatDraw(matchState.getIdentifier(), Orientation.TOP_RIGHT, batch);
 
-        fontbook.reset().font("tinyislanders").fontSize(30).fontColor(Color.valueOf("#d0cee08F"));
+        fontbook.reset().font("tinyislanders").fontSize(35).fontColor(Color.valueOf("#d0cee08F"));
         fontbook.formatDraw("X: " + truncate(projVec.x, 2), new Vector2(30, 110), batch);
         fontbook.formatDraw("Y: " + truncate(projVec.y, 2), new Vector2(30, 85), batch);
         fontbook.formatDraw("Z: " + truncate(projVec.z, 2), new Vector2(30, 60), batch);
@@ -434,15 +435,12 @@ public class HUD {
         batch.dispose();
     }
 
+    @AllArgsConstructor
     public enum HUDState {
         HIDDEN(-1),
         ACTIVE(0),
         ENTER(1),
         EXIT(2);
-
-        HUDState(int i) {
-            val = i;
-        }
 
         final int val;
     }

@@ -1,12 +1,14 @@
 package io.github.pocketrice.client.screens;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.ScreenAdapter;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import io.github.pocketrice.client.*;
 import io.github.pocketrice.client.ui.BatchGroup;
@@ -30,6 +32,8 @@ public class GameScreen extends ScreenAdapter {
     private GameManager gmgr;
     private SchuAssetManager amgr;
     private Stage stage;
+    private SchuButton btnStart;
+
     @Setter
     private boolean isPromptReady; // terrible
 
@@ -45,7 +49,7 @@ public class GameScreen extends ScreenAdapter {
         fontbook = amgr.getFontbook();
         //fontbook.bind(batch);
 
-        SchuButton btnStart = new SchuButton("TO WAR!", SchuButton.generateStyle("tf2build", Color.valueOf("#B8B0CF"), 60), amgr)
+        btnStart = new SchuButton("TO WAR!", SchuButton.generateStyle("tf2build", Color.valueOf("#B8B0CF"), 60), amgr)
                 .activeObjs(List.of(gmgr, this))
                 .activeFunc((objs) -> {
                     GameManager gman = (GameManager) objs.get(0);
@@ -82,6 +86,11 @@ public class GameScreen extends ScreenAdapter {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
         grdr.render();
 
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+            InputEvent ie = new InputEvent();
+            ie.setType(InputEvent.Type.touchDown);
+            btnStart.fire(ie);
+        }
         if (isPromptReady) {
             if (!grdr.isPromptBlur()) {
                 grdr.setPromptBlur(true);
@@ -108,7 +117,7 @@ public class GameScreen extends ScreenAdapter {
     @Override
     public void resize(int width, int height) {
         grdr.getPostBatch().getProjectionMatrix().setToOrtho2D(0,0,width, height);
-        grdr.buildFBO(width, height);
+        grdr.buildFBOs(width, height);
         grdr.getVfxManager().resize(width, height);
     }
     @Override

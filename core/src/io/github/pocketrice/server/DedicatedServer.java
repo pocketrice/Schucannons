@@ -129,7 +129,6 @@ public class DedicatedServer extends GameServer {
                                 } else {
                                     kryoServer.sendToTCP(con.getID(), new Response("GS_ackReady", null));
                                 }
-                                throw new IllegalArgumentException("Invalid client request — " + rq.getMsg() + "!"); // FIXME
                             }
 
                             case "GC_start" -> {

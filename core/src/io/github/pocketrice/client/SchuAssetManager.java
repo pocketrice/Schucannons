@@ -86,4 +86,11 @@ public class SchuAssetManager extends AssetManager {
         String identifier = (!this.contains(fileId)) ? aliases.get(fileId) : fileId;
         return super.finishLoadingAsset(identifier);
     }
+
+    @Override
+    public void dispose() {
+        super.dispose();
+        audiobox.dispose();
+        fontbook.dispose();
+    }
 }

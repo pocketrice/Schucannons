@@ -105,7 +105,7 @@ public class LoadScreen extends ScreenAdapter {
             if (loadSpinner.equals("Loading....")) {
                 loadSpinner = "Loading";
             }
-            loadInfo = (!amgr.isFinished()) ? "Packing " + amgr.getCurrentLoad()
+            loadInfo = (!amgr.isFinished()) ? "Assembling " + amgr.getCurrentLoad()
                     : (!gmgr.isClientConnected()) ? "Connecting to server"
                     : loadFlavour;
             //loadMsg += ("▓".repeat((int) (10 * amgr.getProgress())) + "▒".repeat((int) (10 * (1 - amgr.getProgress()))));

@@ -54,7 +54,7 @@ public class SchuGame extends Game {
 		amgr.aliasedLoad("skins/onett/skin/terra-mother-ui.json", "defaultSkin", Skin.class);
 		amgr.finishLoadingAsset("defaultSkin");
 
-		Audiobox ab = new Audiobox();
+		Audiobox ab = new Audiobox(0.6f);
 		ab.setAmgr(amgr);
 		ab.importAll();
 		amgr.setAudiobox(ab);
@@ -93,9 +93,14 @@ public class SchuGame extends Game {
 		grdr.dispose();
 		screen.dispose();
 		sclient.disconnect();
+		amgr.dispose();
 	}
 
-	public static SchuAssetManager getGlobalAmgr() {
+	public static SchuAssetManager globalAmgr() {
 		return ((SchuGame) Gdx.app.getApplicationListener()).getAmgr();
+	}
+
+	public static SchuGame globalGame() {
+		return (SchuGame) Gdx.app.getApplicationListener();
 	}
 }
