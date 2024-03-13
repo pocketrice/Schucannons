@@ -23,12 +23,17 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
 import org.javatuples.Pair;
+import oshi.SystemInfo;
+import oshi.hardware.CentralProcessor.ProcessorIdentifier;
+import oshi.hardware.GraphicsCard;
 import space.earlygrey.shapedrawer.ShapeDrawer;
 
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import static io.github.pocketrice.client.GameClient.fillStr;
+import static io.github.pocketrice.client.Match.truncVec;
 import static io.github.pocketrice.client.Match.truncate;
 import static io.github.pocketrice.client.SchuGame.VIEWPORT_HEIGHT;
 import static io.github.pocketrice.client.SchuGame.VIEWPORT_WIDTH;
@@ -71,6 +76,8 @@ public class HUD {
     private Vector2 debugBoxStart;
     @Setter
     private HUDState hudPromptState;
+    private ProcessorIdentifier cpuInfo;
+    private GraphicsCard gpuInfo;
 
     public HUD(GameManager gm, GameRenderer gr) {
         batch = new SpriteBatch();
@@ -80,6 +87,10 @@ public class HUD {
         grdr = gr;
         audiobox = amgr.getAudiobox();
         fontbook = amgr.getFontbook();
+
+        SystemInfo si = new SystemInfo();
+        cpuInfo = si.getHardware().getProcessor().getProcessorIdentifier();
+        gpuInfo = si.getHardware().getGraphicsCards().get(0);
 
         loadAssets();
         sdr = new ShapeDrawer(batch, mainSheet.findRegion("1px"));
@@ -265,25 +276,32 @@ public class HUD {
             Vector3 camPos = grdr.getGameCam().position;
             Vector3 camDir = grdr.getGameCam().direction;
             fontbook.toggleCoverAware(true);
-            fontbook.formatDraw("loc: (" + truncate(camPos.x, 3) + ", " + truncate(camPos.y, 3) + ", " + truncate(camPos.z, 3) + ")", Orientation.TOP_LEFT, batch);
-            fontbook.formatDraw("look: (" + truncate(camDir.x, 3) + ", " + truncate(camDir.y, 3) + ", " + truncate(camDir.z, 3) + ")", Orientation.TOP_LEFT, batch);
+            fontbook.formatDraw("loc: " + truncVec(camPos, 3), Orientation.TOP_LEFT, batch);
+            fontbook.formatDraw("look: " + truncVec(camDir, 3), Orientation.TOP_LEFT, batch);
             fontbook.formatDraw("fps: " + Gdx.graphics.getFramesPerSecond(), Orientation.TOP_LEFT, batch);
             fontbook.formatDraw("tps: " + gmgr.getClient().getServerTps(), Orientation.TOP_LEFT, batch);
             fontbook.formatDraw("server: " + gmgr.getClient().getServerName(), Orientation.TOP_LEFT, batch);
             fontbook.formatDraw("client: " + gmgr.getClient().getClientName(), Orientation.TOP_LEFT, batch);
             fontbook.formatDraw("ping: " + gmgr.getClient().getPing(), Orientation.TOP_LEFT, batch);
+            fontbook.toggleCoverAware(false);
 
+            fontbook.toggleCoverAware(true);
+            String[] deadThreads = gmgr.queryThreads();
+
+            long totalMem = Runtime.getRuntime().totalMemory();
+            long freeMem = Runtime.getRuntime().freeMemory();
+            long remMem = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+
+            fontbook.formatDraw("Java " + Runtime.version().version().stream().map(Object::toString).collect(Collectors.joining(".")) + " " + (cpuInfo.isCpu64bit() ? 64 : 32) + "-bit", Orientation.TOP_RIGHT, batch);
             if ((double) Runtime.getRuntime().freeMemory() / Runtime.getRuntime().totalMemory() < 0.05) {
                 System.err.println("<!> Memory warning: " + Runtime.getRuntime().freeMemory() / 1E6f + "mb remaining!");
                 fontbook.fontColor(Color.valueOf("#B3666C7F"));
             } else
                 fontbook.fontColor(Color.valueOf("#DFE6D17F"));
+            fontbook.formatDraw("mem: " + (remMem * 100 / totalMem) + "% " + truncate((remMem) / 1E6f, 2) + "/" + truncate(totalMem / 1E6f, 2) + "mb", Orientation.TOP_RIGHT, batch);
+            fontbook.formatDraw("cpu: " + Runtime.getRuntime().availableProcessors() + "x " + cpuInfo.getName(), Orientation.TOP_RIGHT, batch);
+            fontbook.formatDraw("gpu: " + gpuInfo.getName() +  " " + gpuInfo.getVRam() + "gb", Orientation.TOP_RIGHT, batch);
 
-            fontbook.formatDraw("mem: " + truncate((Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1E6f, 2) + "mb / " + truncate(Runtime.getRuntime().totalMemory() / 1E6f, 2) + "mb", Orientation.TOP_LEFT, batch);
-            fontbook.toggleCoverAware(false);
-
-            fontbook.toggleCoverAware(true);
-            String[] deadThreads = gmgr.queryThreads();
             fontbook.reset().font("koholint").fontSize(16).fontColor(Color.valueOf("#fbacc04f")).padY(disconCover).coverPad(5f);
             for (String dt : deadThreads) {
                 fontbook.formatDraw("Thread " + dt + " dead!", Orientation.TOP_RIGHT, batch);

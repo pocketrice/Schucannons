@@ -157,7 +157,10 @@ public class SchuButton extends TextButton implements Focusable {
         Batchable ba = new Batchable(this);
 
         switch (preset) {
-            case COLOR -> lil = LinkInterlerper.generateColorTransition(ba, (Color) v1, (Color) v2, easing, ss);
+            case COLOR -> {
+                lil = LinkInterlerper.generateColorTransition(ba, (Color) v1, (Color) v2, easing, ss);
+                getStyle().downFontColor = ((Color) v2).cpy().sub(0.1f, 0.1f, 0.1f, 0f); // Update down color since end color is different now
+            }
             case OPACITY -> lil = LinkInterlerper.generateOpacityTransition(ba, (float) v1, (float) v2, easing, ss);
             case POSITION -> lil = LinkInterlerper.generatePosTransition(ba, (Vector2) v1, (Vector2) v2, easing, ss);
             case ROTATION -> lil = LinkInterlerper.generateRotTransition(ba, (float) v1, (float) v2, easing, ss);
@@ -180,7 +183,14 @@ public class SchuButton extends TextButton implements Focusable {
     }
 
     @Override
-    public void handleSel() {
+    public void handleSelDown() {
+        InputEvent ie = new InputEvent();
+        ie.setType(InputEvent.Type.touchDown);
+        this.fire(ie);
+    }
+
+    @Override
+    public void handleSelUp() {
         InputEvent ie = new InputEvent();
         ie.setType(InputEvent.Type.touchUp);
         this.fire(ie);
@@ -195,6 +205,7 @@ public class SchuButton extends TextButton implements Focusable {
         TextButtonStyle tbs = new TextButtonStyle();
         tbs.font = Fontbook.quickFont(font, fs);
         tbs.fontColor = color;
+        tbs.downFontColor = color.cpy().sub(0.05f, 0.05f, 0.05f, 0f);
 
         return tbs;
     }

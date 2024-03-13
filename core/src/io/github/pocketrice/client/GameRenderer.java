@@ -40,10 +40,7 @@ import io.github.pocketrice.client.postproc.effects.AsciiEffect;
 import io.github.pocketrice.client.postproc.effects.FastDistortEffect;
 import io.github.pocketrice.client.postproc.effects.HalftoneEffect;
 import io.github.pocketrice.client.ui.HUD;
-import io.github.pocketrice.shared.EasingFunction;
-import io.github.pocketrice.shared.Interlerper;
-import io.github.pocketrice.shared.Interval;
-import io.github.pocketrice.shared.Orientation;
+import io.github.pocketrice.shared.*;
 import lombok.Getter;
 import lombok.Setter;
 import net.mgsx.gltf.loaders.glb.GLBLoader;
@@ -57,11 +54,12 @@ import static com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888;
 import static io.github.pocketrice.client.Match.truncVec;
 import static io.github.pocketrice.client.SchuGame.VIEWPORT_HEIGHT;
 import static io.github.pocketrice.client.SchuGame.VIEWPORT_WIDTH;
+import static io.github.pocketrice.client.ui.FocusableGroup.wrapIndex;
 
 // Turns backend logic into glorious rendering. As in, take crap from GameManager that's from the server and move stuff around. All rendering is ONLY in this class.
 // This should only be used for GameScreen.
 public class GameRenderer {
-    public static final Vector3 CAMERA_POS = new Vector3(0f, 2f, 0f), CAMERA_LOOK = new Vector3(2f, 5f, 2f);
+    public static final Vector3 CAMERA_POS = new Vector3(0f, 2f, 0f), CAMERA_LOOK = new Vector3(0f, 0f, 5f);
     public static final float CHAIN_TAP_SEC = 0.75f, DEBUG_PERSP_CULL_DIST = 0.5f;
 
     ModelGroup cannonA, cannonB;
@@ -96,13 +94,15 @@ public class GameRenderer {
     Fontbook fontbook;
 
     ArrayDeque<Pair<Vector3, Vector3>> debugPersps; // Refer to look+loc as perspectives, and singles as points.
+    EvictingMap<Vector3[], Set<ModelInstance>> dpModelCache;
+    EvictingMap<Vector3, Decal> dpDecalCache;
     Interlerper<Vector3> dpLocInterlerp, dpLookInterlerp;
     Interval dpExitInterv;
     ModelBuilder dpBuilder;
     MeshPartBuilder dpPartBuilder;
     DecalBatch dpBatch;
-    int dpRenderType;
 
+    int dpRenderType;
     boolean isPaused, isPauseFirstPass, isEffectsUpdated, isDebugInterp;
     @Getter @Setter
     boolean isPromptBlur;
@@ -116,16 +116,17 @@ public class GameRenderer {
 
         modelBatch = new ModelBatch();
         envMi = new ModelInstance(amgr.aliasedGet("modelSky", Model.class));
-        envMi.transform.scl(2f);
-        envMi.transform.rotate(new Quaternion(Vector3.Z, (float) (Math.PI * 2)));
+        envMi.transform.scl(5f);
+        envMi.transform.rotate(Vector3.X, 180f);
         projMi = new ModelInstance(amgr.aliasedGet("modelCannonWheel", Model.class));
 
         cannonA = new ModelGroup();
         cannonA.setGroupName("cannonA");
-        cannonA.addSubmodel(amgr.aliasedGet("modelCannonBarrel", Model.class), Vector3.Zero, new Quaternion());
+       // cannonA.addSubmodel(amgr.aliasedGet("modelCannonBarrel", SceneAsset.class).scene.model, Vector3.Zero, new Quaternion());
         cannonA.addSubmodel(amgr.aliasedGet("modelCannonWheel", Model.class), new Vector3(0f, -0.05f, 0.05f), new Quaternion());
         cannonA.addSubmodel(amgr.aliasedGet("modelCannonWheel", Model.class), new Vector3( 0f, -0.05f, -0.05f)/*new Vector3(0.1f, -0.05f, 0.1f)*/, new Quaternion(Vector3.Y, (float) (Math.PI * 2)));
         cannonA.applyOffsets();
+        cannonA.translate(new Vector3(50f, 0, 0));
         // cannonA.scl(5f); // tip: getTranslation is not distance from that particular vec3... it instead stores it in the passed-in vec. Oups! 1 hour debugging.
 
         cannonB = cannonA.cpy();
@@ -220,8 +221,8 @@ public class GameRenderer {
         inputMult = new InputMultiplexer(hud.getStage(), inputCic, inputKbAdapter);
 
         env = new Environment();
-        env.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.5f, 0.5f, 0.7f, 1.5f));
-        env.add(new DirectionalLight().set(0.5f, 0.4f, 0.55f, 1f, 0.3f, 0f));
+        env.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.5f, 0.5f, 0.7f, 0.8f));
+        env.add(new DirectionalLight().set(0.4f, 0.4f, 0.55f, -1f, 0.3f, 0f));
         env.add(new DirectionalLight().set(0.4f, 0.4f, 0.4f, 0f, 0.5f, 0f));
 
         isPaused = false;
@@ -231,6 +232,8 @@ public class GameRenderer {
 
         //dpBatch = new DecalBatch(100, new CameraGroupStrategy(gameCam));
         debugPersps = new ArrayDeque<>();
+        dpModelCache = new EvictingMap<>(10);
+        dpDecalCache = new EvictingMap<>(10);
         dpExitInterv = new Interval(CHAIN_TAP_SEC);
         dpRenderType = DebugPerspRenderType.NONE_TOTAL;
         dpBuilder = new ModelBuilder();
@@ -243,7 +246,6 @@ public class GameRenderer {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
         gameCam.update();
         inputCic.update();
-
 
         if (isPaused) {
             fbo.begin();
@@ -310,10 +312,14 @@ public class GameRenderer {
                 debugPersps.add(Pair.with(gameCam.position.cpy(), gameCam.direction.cpy()));
                 audiobox.playSfx("wpn_moveselect", 1f);
             } else if (Gdx.input.isKeyJustPressed(Keys.LEFT_BRACKET)) { // ** Teleport to prev DP
-                cycleDebugPersp(false);
+                if (!debugPersps.isEmpty()) {
+                    cycleDebugPersp(false);
+                }
                 audiobox.playSfx("m3_hormenu", 1f);
             } else if (Gdx.input.isKeyJustPressed(Keys.RIGHT_BRACKET)) { // ** Teleport to next DP
-                cycleDebugPersp(true);
+                if (!debugPersps.isEmpty()) {
+                    cycleDebugPersp(true);
+                }
                 audiobox.playSfx("m3_vertmenu", 1f);
             } else if (Gdx.input.isKeyJustPressed(Keys.SEMICOLON)) { // ** Toggle debug interp
                 isDebugInterp = !isDebugInterp;
@@ -328,7 +334,7 @@ public class GameRenderer {
                     audiobox.playSfx("unitismovingin", 1f);
                 } else {
                     dpExitInterv.stamp();
-                    debugPersps.remove();
+                    debugPersps.poll(); // Remove from queue
                     audiobox.playSfx("unitisinbound", 1f);
                 }
             } else if (Gdx.input.isKeyJustPressed(Keys.APOSTROPHE)) { // ** Teleport to nearest DP
@@ -343,8 +349,10 @@ public class GameRenderer {
                     cycleDebugPersp(true);
                     audiobox.playSfx("m3_vertmenu", 1f);
                 }
+            } else if (Gdx.input.isKeyJustPressed(Keys.R)) { // ** Reset camera
+                gameCam.position.set(Vector3.Zero);
+                gameCam.lookAt(Vector3.Z);
             }
-
 
             // ## Render the actual thing the keys have done! ##
             if (dpLocInterlerp != null && dpLocInterlerp.remainingSteps() > 0) { // INTERP CAM (DEBUG). Can safely assume lookInterlerp is also readied — this effectively replaces a redundant "isDebugInterlerp" bool. Confusingly that is already used for what settings debug should use. Ah.
@@ -352,44 +360,59 @@ public class GameRenderer {
                 gameCam.direction.set(dpLookInterlerp.advance());
             }
 
-            List<ModelInstance> dpMi = new ArrayList<>();
+            // list of things to render
+            // add them per step
+            //
+            Vector3[] perspsPos = debugPersps.stream().map(Pair::getValue0).toArray(Vector3[]::new);
+            dpModelCache.putIfAbsent(perspsPos, new HashSet<>());
 
             if (dpRenderType >= DebugPerspRenderType.NONE_TOTAL) { // ...draw points
                 int partIndex = 0;
-                dpBuilder.begin();
-                for (Pair<Vector3, Vector3> persp : debugPersps) {
-                    if (gameCam.position.dst(persp.getValue0()) > DEBUG_PERSP_CULL_DIST) {
-                        dpPartBuilder = dpBuilder.part("dp" + partIndex, 1, 3, new Material());
-                        dpPartBuilder.setColor(Color.valueOf("#B9C4BC"));
-                        dpPartBuilder.setVertexTransform(new Matrix4().translate(persp.getValue0()));
-                        SphereShapeBuilder.build(dpPartBuilder, 0.5f, 0.5f, 0.5f, 4, 4);
-                    }
-                    partIndex++;
-                }
 
-                dpMi.add(new ModelInstance(dpBuilder.end()));
+                if (dpModelCache.get(perspsPos).isEmpty()) {
+                    dpBuilder.begin();
+
+                    for (Vector3 persp : perspsPos) {
+                        if (gameCam.position.dst(persp) > DEBUG_PERSP_CULL_DIST) {
+                            dpPartBuilder = dpBuilder.part("dppos" + partIndex, 1, 3, new Material());
+                            dpPartBuilder.setColor(Color.valueOf("#A5A2DB"));
+                            dpPartBuilder.setVertexTransform(new Matrix4().translate(persp));
+                            SphereShapeBuilder.build(dpPartBuilder, 0.5f, 0.5f, 0.5f, 3, 3);
+
+//                        dpPartBuilder = dpBuilder.part("dpcam" + partIndex, 1, 3, new Material());
+//                        dpPartBuilder.setColor(Color.valueOf("#B9C4BC"));
+//                        dpPartBuilder.setVertexTransform(new Matrix4().setToLookAt(persp.getValue0(), persp.getValue1(), Vector3.Z));
+//                        ConeShapeBuilder.build(dpPartBuilder, 0.3f, 0.6f, 0.3f, 4);
+                        }
+                        partIndex++;
+                    }
+
+                    dpModelCache.get(perspsPos).add(new ModelInstance(dpBuilder.end()));
+                }
             }
 
             if (dpRenderType >= DebugPerspRenderType.NONE_CON) { // ...draw lines b/w points
                 List<Vector3> dpList = debugPersps.stream().map(Pair::getValue0).toList();
 
-                dpBuilder.begin();
-                for (int i = 0; i < dpList.size() - 1; i++) {
-                    Vector3 endA = dpList.get(i);
-                    Vector3 endB = dpList.get(i + 1);
+                if (dpModelCache.get(perspsPos).size() == 1) {
+                    dpBuilder.begin();
 
-                    dpPartBuilder = dpBuilder.part("bline" + i + "-" + (i + 1), 1, 3, new Material());
-                    dpPartBuilder.setColor(Color.valueOf("#AEC3B07F"));
-                    dpPartBuilder.line(endA, endB);
+                    for (int i = 0; i < dpList.size() - 1; i++) {
+                        Vector3 endA = dpList.get(i);
+                        Vector3 endB = dpList.get(i + 1);
+
+                        dpPartBuilder = dpBuilder.part("bline" + i + "-" + (i + 1), 1, 3, new Material());
+                        dpPartBuilder.setColor(Color.valueOf("#A095CC7F"));
+                        dpPartBuilder.line(endA, endB);
+                    }
+
+                    dpModelCache.get(perspsPos).add(new ModelInstance(dpBuilder.end()));
                 }
-
-                dpMi.add(new ModelInstance(dpBuilder.end()));
             }
 
             if (dpRenderType >= DebugPerspRenderType.SIMPLE) { // ...draw billboards
                 // Adapted from https://stackoverflow.com/questions/24375179/libgdx-decal-dynamic-text
-
-//                for (Pair<Vector3, Vector3> persp : debugPersps) {
+                for (Vector3 perspPos : perspsPos) {
 //                    Vector3 perspPos = persp.getValue0();
 //                    Matrix4 bbProject = new Matrix4(gameCam.combined);
 //                    Matrix4 bbTransform = new Matrix4().scale(0.01f, 0.01f, 1f);
@@ -399,52 +422,63 @@ public class GameRenderer {
 //
 //                    bbBatch.setProjectionMatrix(bbProject);
 //                    bbBatch.setTransformMatrix(bbTransform);
-                Vector3 perspPos = debugPersps.getFirst().getValue0();
-//                    BitmapFont bmf = fontbook.getSizedBitmap("koholint", 25, Color.valueOf("#B9C4BC8F"));
-                fontbook.font("koholint").fontSize(50).fontColor(Color.valueOf("#b9c4bc8f")).padX(250f);
-                dpFbo.begin();
-                Gdx.gl.glClearColor(1f, 1f, 1f, 1f);
-                Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
+                    if (!dpDecalCache.containsKey(perspPos)) {
+                        fontbook.font("koholint").fontSize(50).fontColor(Color.valueOf("#A095CC")).padX(250f);
+                        dpFbo.begin();
+                        Gdx.gl.glClearColor(0f, 0f, 0f, 0f);
+                        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
+                        bbBatch.begin();
+                        fontbook.formatDraw(truncVec(perspPos, 2), Orientation.LEFT, bbBatch);
+                        bbBatch.end();
 
-                bbBatch.begin();
-                fontbook.formatDraw(truncVec(perspPos, 2), Orientation.LEFT, bbBatch);
-                bbBatch.end();
-                dpFbo.end();
+                        Pixmap pix = Pixmap.createFromFrameBuffer(0, 0, dpFbo.getWidth(), dpFbo.getHeight());
+                        dpFbo.end();
 
-                Texture dpTexture = dpFbo.getColorBufferTexture(); //replaceTexColor(dpFbo.getColorBufferTexture(), Color.BLACK, Color.CLEAR); // BUG! The FBO returns a non-alpha texture (background = black) no matter what I do — I've tried GL.blend, yes it is RGBA and not RGB, etc... so to improvise all black pixels are just cleared.
-                dpTexture.setFilter(TextureFilter.Linear, TextureFilter.Linear);
-                TextureRegion dpTexReg = new TextureRegion(dpTexture);
-                dpTexReg.flip(false, true);
-                Decal decal = Decal.newDecal(dpTexReg);
-                decal.setPosition(new Vector3(perspPos.x, perspPos.y - 0.7f, perspPos.z));
-                decal.setScale(0.01f);
-                decal.lookAt(gameCam.position, gameCam.up);
-                dpBatch.add(decal);
+                        Texture dpTexture = new Texture(pix); // (BUG) NO BUG! The FBO returns a non-alpha texture (background = black) no matter what I do — I've tried GL.blend, yes it is RGBA and not RGB, etc... so to improvise all black pixels are just cleared. [5 hours later] Actually, I am stupid :( it is a decal problem; to render w/ transparency an add'l bool was passed to constructor. Aw.
+                        dpTexture.setFilter(TextureFilter.Linear, TextureFilter.Linear);
+                        TextureRegion dpTexReg = new TextureRegion(dpTexture);
+                        dpTexReg.flip(false, true);
+
+                        Decal decal = Decal.newDecal(dpTexReg, true);
+                        decal.setScale(0.01f);
+
+                        dpDecalCache.put(perspPos, decal);
+                    }
+
+                    // Note this is outside of check since decals need to be readded per frame (due to flush)
+                    Decal cachedDecal = dpDecalCache.get(perspPos);
+                    cachedDecal.setPosition(new Vector3(perspPos.x, perspPos.y - 0.7f, perspPos.z)); // Update transforms
+                    cachedDecal.lookAt(gameCam.position, gameCam.up);
+                    dpBatch.add(cachedDecal);
+                }
             }
 
             if (dpRenderType == DebugPerspRenderType.POLY) { // ...do a lil' mesh networking
                 List<Vector3> dpList = debugPersps.stream().map(Pair::getValue0).toList();
 
-                for (int i = 0; i < dpList.size(); i++) { // Draw lines to every DP (except border — the following index) for every DP.
-                    Vector3 currDp = dpList.get(i);
-                    Vector3 borderDp = dpList.get((i == dpList.size() - 1) ? 0 : i);
+                if (dpModelCache.get(perspsPos).size() == 2) {
+                    for (int i = 0; i < dpList.size(); i++) { // Draw lines to every DP (except border — the following index) for every DP.
+                        Vector3 currDp = dpList.get(i);
+                        Vector3 borderPrevDp = dpList.get(wrapIndex(i - 1, dpList.size() - 1));
+                        Vector3 borderNextDp = (i == dpList.size() - 1) ? null : dpList.get(wrapIndex(i + 1, dpList.size() - 1)); // Don't cull for last one.
 
-                    List<Vector3> filteredDp = dpList.stream().filter(dp -> !dp.equals(borderDp)).toList();
+                        List<Vector3> filteredDp = dpList.stream().filter(dp -> !dp.equals(borderPrevDp) && !dp.equals(borderNextDp)).toList();
 
-                    for (Vector3 fdp : filteredDp) {
-                        dpBuilder.begin();
-                        dpPartBuilder = dpBuilder.part("pline" + i + "-" + dpList.indexOf(fdp), 1, 3, new Material());
-                        dpPartBuilder.setColor(Color.valueOf("#8096823F"));
-                        dpPartBuilder.line(currDp, fdp);
-                        dpMi.add(new ModelInstance(dpBuilder.end()));
+                        for (Vector3 fdp : filteredDp) {
+                            dpBuilder.begin();
+                            dpPartBuilder = dpBuilder.part("pline" + i + "-" + dpList.indexOf(fdp), 1, 3, new Material());
+                            dpPartBuilder.setColor(Color.valueOf("#726EB5"));
+                            dpPartBuilder.line(currDp, fdp);
+                            dpModelCache.get(perspsPos).add(new ModelInstance(dpBuilder.end()));
+                        }
                     }
                 }
             }
 
             dpBatch.flush();
             modelBatch.begin(gameCam);
-            dpMi.forEach(mi -> modelBatch.render(mi));
+            dpModelCache.get(perspsPos).forEach(mi -> modelBatch.render(mi));
             modelBatch.end();
         }
 
@@ -464,8 +498,8 @@ public class GameRenderer {
         }
 
         if (isDebugInterp) { // Activate smooth interp over...
-            dpLocInterlerp = new Interlerper<>(currPersp.getValue0(), nextPersp.getValue0(), EasingFunction.SMOOTHERSTEP, 200);
-            dpLookInterlerp = new Interlerper<>(currPersp.getValue1(), nextPersp.getValue1(), EasingFunction.SMOOTHERSTEP, 200);
+            dpLocInterlerp = new Interlerper<>(currPersp.getValue0(), nextPersp.getValue0(), EasingFunction.SMOOTHERSTEP, 150);
+            dpLookInterlerp = new Interlerper<>(currPersp.getValue1(), nextPersp.getValue1(), EasingFunction.SMOOTHERSTEP, 150);
         } else { // ...or just teleport over.
             gameCam.position.set(nextPersp.getValue0());
             gameCam.direction.set(nextPersp.getValue1());
@@ -551,16 +585,44 @@ public class GameRenderer {
         if (!texData.isPrepared()) texData.prepare();
         Pixmap pix = texData.consumePixmap();
 
+        return new Texture(pix);
+    }
+
+    public static Pixmap replacePixColor(Pixmap pix, Color oldCol, Color newCol) {
+        Pixmap pixCpy = new Pixmap(pix.getWidth(), pix.getHeight(), pix.getFormat());
+
         for (int x = 0; x < pix.getWidth(); x++) {
             for (int y = 0; y < pix.getHeight(); y++) {
-                if (pix.getPixel(x,y) == oldCol.toIntBits()) {
-                    pix.drawPixel(x, y, newCol.toIntBits());
+                if (pix.getPixel(x,y) == Color.rgba8888(oldCol)) { // Notes... pix.getPixel() returns RGBA int, whereas col.toIntBits() returns ARGB int. Different bit placements, so use Color.[format] instead!
+                    pixCpy.drawPixel(x, y, Color.rgba8888(newCol));
+                } else {
+                    pixCpy.drawPixel(x,y,pix.getPixel(x,y));
                 }
             }
         }
 
-        return new Texture(pix);
+        return pix;
     }
+
+//    public static Texture replaceFboTexColor(Texture tex, Color oldCol, Color newCol) { // hacky inefficient alternative b/c fbo color buffer "can't be converted to pixmap"?
+//        ShaderProgram alphaHackShader = buildShader("alphahack.frag");
+//        FrameBuffer fbo = new FrameBuffer(Format.RGBA8888, tex.getWidth(), tex.getHeight(), false);
+//        SpriteBatch batch = new SpriteBatch();
+//
+//        ShaderProgram.pedantic = false;
+//        alphaHackShader.bind();
+//        alphaHackShader.setUniformi("u_texture", 0);
+//        alphaHackShader.setUniform4fv("oldColor", new float[]{oldCol.r, oldCol.g, oldCol.b, oldCol.a}, 0, 4);
+//        alphaHackShader.setUniform4fv("newColor", new float[]{newCol.r, newCol.g, newCol.b, newCol.a}, 0, 4);
+//        batch.setShader(alphaHackShader);
+//        fbo.begin();
+//        batch.begin();
+//        batch.draw(new TextureRegion(tex), 0, 0);
+//        batch.end();
+//        fbo.end();
+//
+//        return fbo.getColorBufferTexture();
+//    }
 
     public static VfxManager setVfx(VfxManager vfm, ChainVfxEffect... effects) {
         vfm.removeAllEffects();

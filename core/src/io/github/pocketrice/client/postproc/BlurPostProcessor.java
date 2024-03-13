@@ -34,13 +34,17 @@ public class BlurPostProcessor {
 
 
     // adapted from JamesTKhan shader tutorial
-    private ShaderProgram buildShader(String vertPath, String fragPath) {
+    public static ShaderProgram buildShader(String vertPath, String fragPath) {
         String vert = Gdx.files.internal(vertPath).readString();
         String frag = Gdx.files.internal(fragPath).readString();
         return compileShader(vert, frag);
     }
 
-    private ShaderProgram compileShader(String vertCode, String fragCode) {
+    public static ShaderProgram buildShader(String fragPath) {
+        return compileShader(Gdx.files.classpath("gdxvfx/shaders/screenspace.vert").readString(), Gdx.files.internal("shaders/" + fragPath).readString());
+    }
+
+    public static ShaderProgram compileShader(String vertCode, String fragCode) {
         ShaderProgram program = new ShaderProgram(vertCode, fragCode);
 
         if (!program.isCompiled()) {

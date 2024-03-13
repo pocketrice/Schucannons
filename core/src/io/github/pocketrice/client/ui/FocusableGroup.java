@@ -2,8 +2,7 @@ package io.github.pocketrice.client.ui;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
-import io.github.pocketrice.client.Audiobox;
-import io.github.pocketrice.client.SchuGame;
+import com.badlogic.gdx.graphics.Cursor;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -12,24 +11,27 @@ import java.util.List;
 
 public class FocusableGroup extends ArrayList<Focusable> { // Similar to BatchGroup in that it doesn't draw from LibGDX group, but no rendering is done here. Simply a container!
     List<Boolean> areStable;
-    boolean isEnabled;
-    int focusIndex, groupIndex;
+    boolean isEnabled, isFocused, isNeedy, wasSelHeld; // Needy = needs to be updated every tick (e.g. interp is within handleFocus())
+    int focusIndex, groupIndex; // <- for use if there are several FocGroups in a single UI! NOT implemented yet though. TBD. :D
 
     public FocusableGroup() {
-        this(new Focusable[]{});
+        this(false);
     }
 
-    public FocusableGroup(Focusable... fs) {
-        this(0, fs);
+    public FocusableGroup(boolean isNeedy, Focusable... fs) {
+        this(isNeedy, 0, fs);
     }
 
-    public FocusableGroup(int gi, Focusable... fs) {
+    public FocusableGroup(boolean isNeedy, int gi, Focusable... fs) {
         this.addAll(List.of(fs));
         areStable = new ArrayList<>(this.size());
         this.forEach(f -> areStable.add(true));
         focusIndex = -1;
         groupIndex = gi;
         isEnabled = false;
+        isFocused = false;
+        this.isNeedy = isNeedy;
+        wasSelHeld = false;
     }
 
     public void enable() {
@@ -42,34 +44,39 @@ public class FocusableGroup extends ArrayList<Focusable> { // Similar to BatchGr
 
     public void update() { // Called every tick
         updateStability();
-        int muteIndex = -1;
+        boolean isKeyed = true;
 
         if (isEnabled) {
-            if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
-                this.get(focusIndex).handleSel();
+            if (isFocused) {
+                Gdx.graphics.setSystemCursor(Cursor.SystemCursor.None);
+            }
+
+            if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER) && isFocused) {
+                this.get(focusIndex).handleSelDown();
+            }
+            else if (wasSelHeld && !Gdx.input.isKeyPressed(Input.Keys.ENTER)) { // Check if pressed last frame, but not pressed now (released)
+                if (isFocused) {
+                    this.get(focusIndex).handleSelUp();
+                } else {
+                    shiftFocus(true);
+                }
             }
             else if (Gdx.input.isKeyJustPressed(Input.Keys.TAB)) {
-                muteIndex = focusIndex;
-                if (focusIndex != -1) {
-                    areStable.set(focusIndex, false); // Destabilise old focusable
-                }
+                shiftFocus(!Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)); // LSHIFT modifier = back, none = forward — just like browser!s
+            }
+            else if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE) || isFocused && (Gdx.input.getDeltaX() != 0 || Gdx.input.getDeltaY() != 0)) {
+                exitFocus();
+            }
+            else {
+                isKeyed = false;
+            }
 
-                focusIndex = wrapIndex((Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)) ? focusIndex - 1 : focusIndex + 1, this.size() - 1);
-                areStable.set(focusIndex, false); // Destabilise new focusable
-            }
-            else if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
-                focusIndex = -1;
-            }
+            wasSelHeld = Gdx.input.isKeyPressed(Input.Keys.ENTER); // Save current frame isHeld for checking next frame.
         }
 
-        for (int i = 0; i < this.size(); i++) {
-            if (!areStable.get(i)) {
-                if (i == muteIndex) {
-                    Audiobox ab = SchuGame.globalAmgr().getAudiobox();
-                    ab.mute(); // Mute exit sound
-                    this.get(i).handleFocus((i == focusIndex));
-                    ab.unmute();
-                } else {
+        if (isNeedy || isKeyed) { // If needy then always, if not needy then only if keyed.
+            for (int i = 0; i < this.size(); i++) {
+                if (!areStable.get(i)) {
                     this.get(i).handleFocus((i == focusIndex));
                 }
             }
@@ -80,6 +87,27 @@ public class FocusableGroup extends ArrayList<Focusable> { // Similar to BatchGr
         for (int i = 0; i < this.size(); i++) {
             areStable.set(i, this.get(i).isStable());
         }
+    }
+
+    public void shiftFocus(boolean isForward) {
+        if (focusIndex != -1) {
+            areStable.set(focusIndex, false); // Destabilise old focusable
+        }
+
+        focusIndex = wrapIndex((isForward) ? focusIndex + 1 : focusIndex - 1, this.size() - 1);
+        areStable.set(focusIndex, false); // Destabilise new focusable
+
+        isFocused = true;
+    }
+
+    public void exitFocus() {
+        if (focusIndex != -1) {
+            areStable.set(focusIndex, false); // Destabilise old focusable
+        }
+        focusIndex = -1; // Stable
+        Gdx.graphics.setSystemCursor(Cursor.SystemCursor.Arrow);
+
+        isFocused = false;
     }
 
 

@@ -35,7 +35,7 @@ public class GameScreen extends ScreenAdapter {
     private SchuButton btnStart;
 
     @Setter
-    private boolean isPromptReady; // terrible
+    private boolean isPromptReady, wasSelHeld;
 
     public GameScreen(GameManager gm, GameRenderer gr) throws BatchableException {
         batch = new SpriteBatch();
@@ -86,15 +86,22 @@ public class GameScreen extends ScreenAdapter {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
         grdr.render();
 
-        if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
-            InputEvent ie = new InputEvent();
-            ie.setType(InputEvent.Type.touchDown);
-            btnStart.fire(ie);
-        }
         if (isPromptReady) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
+                InputEvent ie = new InputEvent();
+                ie.setType(InputEvent.Type.touchDown);
+                btnStart.fire(ie);
+            }
+            else if (wasSelHeld && !Gdx.input.isKeyPressed(Input.Keys.ENTER)) {
+                InputEvent ie = new InputEvent();
+                ie.setType(InputEvent.Type.touchUp);
+                btnStart.fire(ie);
+            }
+
             if (!grdr.isPromptBlur()) {
                 grdr.setPromptBlur(true);
             }
+            wasSelHeld = Gdx.input.isKeyPressed(Input.Keys.ENTER);
 
             batch.begin();
             fontbook.font("tf2segundo").fontColor(Color.valueOf("#a2a0ddc0")).fontSize(40);

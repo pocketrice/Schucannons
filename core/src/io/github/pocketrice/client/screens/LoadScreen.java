@@ -63,10 +63,10 @@ public class LoadScreen extends ScreenAdapter {
     }
 
     private void loadAssets() {
-        amgr.aliasedLoad("models/terrain.glb", "modelTerrain", SceneAsset.class);
+        amgr.aliasedLoad("models/env64.glb", "modelEnv64", SceneAsset.class);
         amgr.aliasedLoad("models/cannonball.gltf", "modelCannonProj", SceneAsset.class);
-        amgr.aliasedLoad("models/skypano.obj", "modelSky", Model.class);
-        amgr.aliasedLoad("models/schubarrel.obj", "modelCannonBarrel", Model.class);
+        amgr.aliasedLoad("models/sky_hl2.obj", "modelSky", Model.class);
+        amgr.aliasedLoad("models/schucannon.glb", "modelCannonBarrel", SceneAsset.class);
         amgr.aliasedLoad("models/schuwheel.obj", "modelCannonWheel", Model.class);
         amgr.aliasedLoad("textures/main.atlas", "mainAtlas", TextureAtlas.class);
     }
@@ -105,7 +105,7 @@ public class LoadScreen extends ScreenAdapter {
             if (loadSpinner.equals("Loading....")) {
                 loadSpinner = "Loading";
             }
-            loadInfo = (!amgr.isFinished()) ? "Assembling " + amgr.getCurrentLoad()
+            loadInfo = (!amgr.isFinished()) ? "Importing " + amgr.getCurrentLoad()
                     : (!gmgr.isClientConnected()) ? "Connecting to server"
                     : loadFlavour;
             //loadMsg += ("▓".repeat((int) (10 * amgr.getProgress())) + "▒".repeat((int) (10 * (1 - amgr.getProgress()))));

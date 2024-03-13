@@ -38,6 +38,19 @@ public class SchuGame extends Game {
 
 	@Override
 	public void create() {
+//		for (Controller con : Controllers.getControllers()) {
+//			Gdx.app.log("CONTROLLER", con.getName());
+//		}
+//
+//		Controllers.addListener(new ControllerAdapter() {
+//			@Override
+//			public boolean buttonDown(Controller controller, int buttonCode) {
+//				super.buttonDown(controller, buttonCode);
+//				System.out.println(buttonCode);
+//				return true;
+//			}
+//		});
+
 		vp = new FillViewport(VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
 
 		amgr = new SchuAssetManager();
