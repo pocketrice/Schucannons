@@ -3,7 +3,6 @@ package io.github.pocketrice.client.ui;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.Cursor;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -25,6 +24,7 @@ import lombok.Setter;
 import org.javatuples.Pair;
 import oshi.SystemInfo;
 import oshi.hardware.CentralProcessor.ProcessorIdentifier;
+import oshi.hardware.GlobalMemory;
 import oshi.hardware.GraphicsCard;
 import space.earlygrey.shapedrawer.ShapeDrawer;
 
@@ -35,8 +35,7 @@ import java.util.stream.Collectors;
 import static io.github.pocketrice.client.GameClient.fillStr;
 import static io.github.pocketrice.client.Match.truncVec;
 import static io.github.pocketrice.client.Match.truncate;
-import static io.github.pocketrice.client.SchuGame.VIEWPORT_HEIGHT;
-import static io.github.pocketrice.client.SchuGame.VIEWPORT_WIDTH;
+import static io.github.pocketrice.client.SchuGame.*;
 import static io.github.pocketrice.shared.AnsiCode.ANSI_BLUE;
 import static io.github.pocketrice.shared.AnsiCode.ANSI_RESET;
 
@@ -78,6 +77,8 @@ public class HUD {
     private HUDState hudPromptState;
     private ProcessorIdentifier cpuInfo;
     private GraphicsCard gpuInfo;
+    private GlobalMemory gmem;
+    private float physMemTotal, virtualMemTotal;
 
     public HUD(GameManager gm, GameRenderer gr) {
         batch = new SpriteBatch();
@@ -91,6 +92,9 @@ public class HUD {
         SystemInfo si = new SystemInfo();
         cpuInfo = si.getHardware().getProcessor().getProcessorIdentifier();
         gpuInfo = si.getHardware().getGraphicsCards().get(0);
+        gmem = si.getHardware().getMemory();
+        physMemTotal = truncate((float) (gmem.getTotal() / Math.pow(1024, 3)), 1);
+        virtualMemTotal = truncate((float) (gmem.getVirtualMemory().getSwapTotal() / Math.pow(1024, 3)), 1);
 
         loadAssets();
         sdr = new ShapeDrawer(batch, mainSheet.findRegion("1px"));
@@ -116,7 +120,7 @@ public class HUD {
 
         //BackgroundColor sbBg = BackgroundColor.generateSolidBg(Color.valueOf("#d3d2e97f"));
         sidebar = new Table().left();
-        sidebar.setPosition(1000, 400); // Set arbitrary distance outside of viewport as initial pos (note: ChainInterlerper should NEVER hide/show items, assuming it may be used for scenarios where terminal visible points are used)
+        sidebar.setPosition(1000, 400); // Set arbitrary distance outside of viewport as initial posOffset (note: ChainInterlerper should NEVER hide/show items, assuming it may be used for scenarios where terminal visible points are used)
         //sidebar.add(thetaPreview).pad(10f, 0f, 10f, 0f);
         sidebar.add(labelTheta).pad(3f, 5f, 3f, 5f).center().minWidth(140);
         sidebar.row().padTop(20);
@@ -124,8 +128,8 @@ public class HUD {
         sidebar.add(labelMag).pad(3f, 5f, 3f, 5f).center().minWidth(140);
         sidebar.row().padTop(20);
         //sidebar.add(thetaSel).pad(10f, 10f, 10f, 10f);
-        sidebar.add(new NumberButton(true, true, "**°", SchuButton.generateStyle("sm64", Color.WHITE, 25), 90f, 0f, 5f, labelTheta, amgr)).padRight(40).right();
-        sidebar.add(new NumberButton(false, true, "**°", SchuButton.generateStyle("sm64", Color.WHITE, 25), 90f, 0f, 5f, labelTheta, amgr)).padRight(40).right();
+        sidebar.add(new NumberButton(true, true, "**°", SchuButton.generateStyle("sm64", Color.WHITE, 25), 80f, 15f, 5f, labelTheta, amgr)).padRight(40).right();
+        sidebar.add(new NumberButton(false, true, "**°", SchuButton.generateStyle("sm64", Color.WHITE, 25), 80f, 15f, 5f, labelTheta, amgr)).padRight(40).right();
         sidebar.row().padTop(20);
         //sidebar.add(magSel).pad(10f, 15f, 10f, 15f);
         sidebar.add(new NumberButton(true, true, " m/s", SchuButton.generateStyle("sm64", Color.valueOf("#DEDEEE"), 25), 90f, 0f, 3f, labelMag, amgr)).padRight(40).right();
@@ -267,7 +271,7 @@ public class HUD {
         float disconCover = 0; // Cannot use isCoverAware due to overlap w/ debug. Notice that coverPad is still set; verbose but good to have.
         if (gmgr.getDisconInterv().isStamped()) {
             fontbook.reset().font("koholint").fontSize(16).fontColor(Color.valueOf("#dfd1d53f")).padY(30f);
-            fontbook.formatDraw("Client disconnected... retrying in " + gmgr.getDisconInterv().humanDelta(true) + "s", Orientation.TOP_RIGHT, batch);
+            fontbook.formatDraw("Client disconnected... retrying in " + fillStr(Orientation.RIGHT, gmgr.getDisconInterv().humanDelta(true), '0', 4) + "s", Orientation.TOP_RIGHT, batch);
             disconCover += fontbook.getCover() + 20f;
         }
 
@@ -288,9 +292,9 @@ public class HUD {
             fontbook.toggleCoverAware(true);
             String[] deadThreads = gmgr.queryThreads();
 
-            long totalMem = Runtime.getRuntime().totalMemory();
-            long freeMem = Runtime.getRuntime().freeMemory();
-            long remMem = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+            long totalMemApp = Runtime.getRuntime().totalMemory();
+            long remMemApp = totalMemApp - Runtime.getRuntime().freeMemory();
+            float remMemTotal = truncate((float) (gmem.getVirtualMemory().getVirtualInUse() / Math.pow(1024, 3)), 1);
 
             fontbook.formatDraw("Java " + Runtime.version().version().stream().map(Object::toString).collect(Collectors.joining(".")) + " " + (cpuInfo.isCpu64bit() ? 64 : 32) + "-bit", Orientation.TOP_RIGHT, batch);
             if ((double) Runtime.getRuntime().freeMemory() / Runtime.getRuntime().totalMemory() < 0.05) {
@@ -298,9 +302,9 @@ public class HUD {
                 fontbook.fontColor(Color.valueOf("#B3666C7F"));
             } else
                 fontbook.fontColor(Color.valueOf("#DFE6D17F"));
-            fontbook.formatDraw("mem: " + (remMem * 100 / totalMem) + "% " + truncate((remMem) / 1E6f, 2) + "/" + truncate(totalMem / 1E6f, 2) + "mb", Orientation.TOP_RIGHT, batch);
+            fontbook.formatDraw("mem: " + (remMemApp * 100 / totalMemApp) + "% " + truncate((remMemApp) / 1E6f, 1) + "/" + truncate(totalMemApp / 1E6f, 2) + "mb", Orientation.TOP_RIGHT, batch);
             fontbook.formatDraw("cpu: " + Runtime.getRuntime().availableProcessors() + "x " + cpuInfo.getName(), Orientation.TOP_RIGHT, batch);
-            fontbook.formatDraw("gpu: " + gpuInfo.getName() +  " " + gpuInfo.getVRam() + "gb", Orientation.TOP_RIGHT, batch);
+            fontbook.formatDraw("gpu: " + gpuInfo.getName() + " " + remMemTotal + "/" + physMemTotal + "+" + virtualMemTotal + "gb (used/ram+vram)", Orientation.TOP_RIGHT, batch);
 
             fontbook.reset().font("koholint").fontSize(16).fontColor(Color.valueOf("#fbacc04f")).padY(disconCover).coverPad(5f);
             for (String dt : deadThreads) {
@@ -311,7 +315,7 @@ public class HUD {
             int mouseX = Gdx.input.getX();
             int mouseY = VIEWPORT_HEIGHT - Gdx.input.getY();
 
-            if (Gdx.input.isKeyJustPressed(Input.Keys.SHIFT_LEFT)) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.SHIFT_RIGHT)) {
                 debugBoxStart = (debugBoxStart != null) ? null : new Vector2(mouseX, mouseY);
             }
             if (debugBoxStart != null) {
@@ -323,7 +327,11 @@ public class HUD {
                 fontbook.formatDraw(deltaX + ", " + deltaY, new Vector2(debugBoxStart.x + 3f, debugBoxStart.y - 5f), batch);
                 sdr.rectangle(debugBoxStart.x, debugBoxStart.y, mouseX - debugBoxStart.x, mouseY - debugBoxStart.y, Color.valueOf("#ea61aabf"));
             }
-            Gdx.graphics.setSystemCursor(Cursor.SystemCursor.None);
+
+            if (!SchuGame.globalGame().isPaused()) {
+                SchuGame.globalGame().hideCursor();
+            }
+
             fontbook.fontColor(Color.valueOf("#82f2d5bf"));
             fontbook.fontSize(15);
             fontbook.formatDraw(mouseX + ", " + mouseY, new Vector2((mouseX > 850) ? mouseX - 65f : mouseX, (mouseY < 200) ? mouseY + 20f : mouseY - 20f), batch);

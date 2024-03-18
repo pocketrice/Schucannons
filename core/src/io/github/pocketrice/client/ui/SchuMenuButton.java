@@ -17,8 +17,8 @@ import lombok.Getter;
 import java.util.List;
 import java.util.UUID;
 
+@Getter
 public class SchuMenuButton extends SchuButton {
-    @Getter
     Label labelMatchPeek;
 
     public SchuMenuButton(String text, TextButtonStyle tbs, GameManager gm, SchuAssetManager sam) {
@@ -41,16 +41,24 @@ public class SchuMenuButton extends SchuButton {
         bindInterlerp(1f, 1.075f, InterlerpPreset.SCALE, EasingFunction.EASE_IN_OUT_QUINTIC, 0.04);
         bindInterlerp(Color.valueOf("#afafdd"), Color.valueOf("#e2e5f3"), InterlerpPreset.COLOR, EasingFunction.EASE_IN_OUT_SINE, 0.04);
         bindInterlerp(LinkInterlerper.generateOpacityTransition(baMatchPeek, 0f, 1f, EasingFunction.EASE_IN_OUT_SINE, 0.04));
-
         interlerps.forEach(il -> il.setInterlerp(false));
 
-        activeObjs = List.of(gm);
-        activeFunc = (activeObjs) -> {
+        activeObjs = List.of(gm, this);
+        inactiveFunc = (activeObjs) -> {
             GameManager gmgr = (GameManager) activeObjs.get(0);
+            SchuMenuButton btn = (SchuMenuButton) activeObjs.get(1);
+            btn.setScale(1.075f);
             gmgr.sendSelMatch(UUID.fromString(text.split("\\|")[0]));
 
             Game game = ((Game) Gdx.app.getApplicationListener());
             game.setScreen(new LoadScreen((SchuGame) game));
         };
+
+        activeFunc = (activeObjs) -> {
+            SchuMenuButton btn = (SchuMenuButton) activeObjs.get(1);
+            btn.setScale(1.01f);
+        };
     }
+
+
 }

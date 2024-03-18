@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 
 import static io.github.pocketrice.server.GameSimulator.*;
 
-public class DedicatedServer extends GameServer {
+public final class DedicatedServer extends GameServer {
     static final int TPS_CHECK_TICKS = 20;
     Map<UUID, MatchData> clientMap;
     Matchmaker mm;

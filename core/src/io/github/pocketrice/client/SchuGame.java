@@ -4,11 +4,13 @@ import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.assets.loaders.FileHandleResolver;
 import com.badlogic.gdx.assets.loaders.resolvers.InternalFileHandleResolver;
+import com.badlogic.gdx.graphics.Cursor.SystemCursor;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGeneratorLoader;
 import com.badlogic.gdx.graphics.g2d.freetype.FreetypeFontLoader;
 import com.badlogic.gdx.graphics.g3d.Model;
+import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.utils.viewport.FillViewport;
 import com.badlogic.gdx.utils.viewport.Viewport;
@@ -33,7 +35,9 @@ public class SchuGame extends Game {
 	private GameManager gmgr;
 	private SchuAssetManager amgr;
 	@Setter
-	boolean isDebug;
+	boolean isDebug, isPaused;
+	boolean isCursorLocked; // <- enforced by GameRenderer's update loop
+	Vector2 cursorLockPos;
 
 
 	@Override
@@ -93,6 +97,9 @@ public class SchuGame extends Game {
 
 		gmgr.setClient(sclient);
 
+		isDebug = false;
+		isPaused = false;
+		isCursorLocked = false;
 		setScreen(new MenuScreen(this));
 	}
 
@@ -108,6 +115,37 @@ public class SchuGame extends Game {
 		sclient.disconnect();
 		amgr.dispose();
 	}
+
+	public void restoreCursor() {
+		Gdx.input.setCursorCatched(false);
+	}
+
+	public void hideCursor() {
+		Gdx.input.setCursorCatched(true);
+	}
+
+	public void bindCursor() {
+		Gdx.input.setCursorPosition(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2);
+	}
+
+	public void lockCursor() {
+		setCursorLocked(true);
+	}
+
+	public void unlockCursor() {
+		setCursorLocked(false);
+	}
+
+	public void setCursorLocked(boolean isLocked) {
+		isCursorLocked = isLocked;
+		if (isCursorLocked) cursorLockPos = new Vector2(Gdx.input.getX(), Gdx.input.getY());
+	}
+
+	public void setCursor(SystemCursor sysCursor) {
+		Gdx.graphics.setSystemCursor(sysCursor);
+	}
+
+
 
 	public static SchuAssetManager globalAmgr() {
 		return ((SchuGame) Gdx.app.getApplicationListener()).getAmgr();

@@ -52,7 +52,7 @@ public class ChainInterlerper {
     }
 
     public void changeSublerpTarget(ChainKeyframe ckf, Object newTarget) {
-        ckf.linkInterlerp.setLinkObj(newTarget);
+        ckf.linkInterlerp.linkObj(newTarget);
     }
 
     public Set<ChainKeyframe> getSublerps(float t) {

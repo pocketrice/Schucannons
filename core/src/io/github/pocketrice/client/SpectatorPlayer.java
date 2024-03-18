@@ -1,6 +1,6 @@
 package io.github.pocketrice.client;
 
-public class SpectatorPlayer extends HumanPlayer {
+public final class SpectatorPlayer extends HumanPlayer {
 
     public SpectatorPlayer(HumanPlayer hp) {
         super(hp.playerId, hp.playerName);

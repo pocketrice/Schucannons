@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-public class EvictingMap<K,V> extends LinkedHashMap<K, V> { // Inspired by Guava implementation
+public class EvictingMap<K,V> extends LinkedHashMap<K,V> { // Inspired by Guava implementation
     int maxSize;
 
     public EvictingMap(int size) {
@@ -19,15 +19,16 @@ public class EvictingMap<K,V> extends LinkedHashMap<K, V> { // Inspired by Guava
     }
 
     public List<Map.Entry<K,V>> evict() { // circular fifo queue-style
-        List<Map.Entry<K,V>> evictedEntries = new ArrayList<>();
+        List<Map.Entry<K,V>> evicted = new ArrayList<>();
         for (Map.Entry<K,V> entry : this.entrySet()) { // only way to iterate eldest -> youngest. Hence, while is impossible since it's a set...
-            if (this.size() > maxSize) {
-                evictedEntries.add(entry);
-                this.remove(entry.getKey());
+            if (this.size() - evicted.size() > maxSize) {
+                evicted.add(entry);
             }
         }
 
-        return evictedEntries;
+        evicted.forEach(e -> this.remove(e.getKey())); // Cannot remove within forloop since it causes ConcurrentModificationException
+
+        return evicted;
     }
 
     public int indexOf(K key) {
@@ -39,6 +40,22 @@ public class EvictingMap<K,V> extends LinkedHashMap<K, V> { // Inspired by Guava
         }
 
         return keyIndex;
+    }
+
+    public K keyAt(int index) {
+        int i = 0;
+        K key = null;
+
+        for (K mapKey : this.keySet()) {
+            if (i == index) key = mapKey;
+            i++;
+        }
+
+        return key;
+    }
+
+    public V valueAt(int index) {
+        return this.get(keyAt(index));
     }
 
     @Nullable
@@ -78,7 +95,7 @@ public class EvictingMap<K,V> extends LinkedHashMap<K, V> { // Inspired by Guava
 
     @Override
     public boolean equals(Object o) { // Same equals(), just checking maxSize too.
-        EvictingMap<K,V> other = (EvictingMap<K,V>) o;
+        var other = (EvictingMap<K,V>) o;
         return super.equals(o) && this.maxSize == other.maxSize;
     }
 }

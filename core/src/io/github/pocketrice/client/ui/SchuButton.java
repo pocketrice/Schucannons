@@ -32,7 +32,7 @@ public class SchuButton extends TextButton implements Focusable {
 
     @Getter
     Set<LinkInterlerper> interlerps;
-    Consumer<List<Object>> activeFunc;
+    Consumer<List<Object>> inactiveFunc, activeFunc;
     List<Object> activeObjs;
     String sfxUp, sfxDown, sfxEnter, sfxExit;
 
@@ -75,13 +75,14 @@ public class SchuButton extends TextButton implements Focusable {
             @Override
             public boolean touchDown(InputEvent event, float x, float y, int pointer, int button) {
                 audiobox.playSfx(sfxDown, 2f);
+                if (activeFunc != null) activeFunc.accept(activeObjs);
                 return true;
             }
 
             @Override
             public void touchUp(InputEvent event, float x, float y, int pointer, int button) {
                 audiobox.playSfx(sfxUp, 2f);
-                activeFunc.accept(activeObjs);
+                if (inactiveFunc != null) inactiveFunc.accept(activeObjs);
             }
 
             @Override
@@ -111,7 +112,7 @@ public class SchuButton extends TextButton implements Focusable {
     public SchuButton(String text, TextButtonStyle tbs, String sfxUp, String sfxDown, String sfxEnter, String sfxExit, float minX, float minY, SchuAssetManager am) {
         super(text, am.get("skins/onett/skin/terra-mother-ui.json", Skin.class));
         amgr = am;
-        activeFunc = (objs) -> {};
+        inactiveFunc = (objs) -> {};
         audiobox = amgr.getAudiobox();
         fontbook = amgr.getFontbook();
 
@@ -127,6 +128,11 @@ public class SchuButton extends TextButton implements Focusable {
         }
 
         reattachListener();
+    }
+
+    public SchuButton inactiveFunc(Consumer<List<Object>> func) {
+        inactiveFunc = func;
+        return this;
     }
 
     public SchuButton activeFunc(Consumer<List<Object>> func) {

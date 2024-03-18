@@ -47,7 +47,7 @@ public class NumberButton extends SchuButton {
         interlerps.add(interlerpButtonSize);
         interlerps.add(LinkInterlerper.generateColorTransition(new Batchable(this), Color.valueOf("#afafdd"), Color.valueOf("#e2e5f3"), EasingFunction.EASE_IN_OUT_SINE, 0.04));
         activeObjs = List.of(label);
-        activeFunc = (objs) -> {
+        inactiveFunc = (objs) -> {
             Label label = (Label) objs.get(0);
             value = Float.parseFloat(revertSuffix(String.valueOf(label.getText()), suffix));
 
@@ -58,7 +58,7 @@ public class NumberButton extends SchuButton {
                 newVal = (value == lowerBound) ? upperBound : value - stepSize; // same bestie
             }
 
-            value = (isWrapping) ? clampWrap(lowerBound, upperBound, newVal) : clamp(lowerBound, upperBound, newVal);
+            value = (isWrapping) ? clampWrap(newVal, lowerBound, upperBound) : clamp(newVal, lowerBound, upperBound);
 
             label.setText(applySuffix(value, suffix));
         };
@@ -86,11 +86,20 @@ public class NumberButton extends SchuButton {
         return result.toString();
     }
 
-    public static float clamp(float lower, float upper, float n) {
+    public static float clamp(float n, float lower, float upper) {
         return Math.max(lower, Math.min(upper, n));
     }
 
-    public static float clampWrap(float lower, float upper, float n) {
+    public static float clamp(float n, float upper) {
+        return clamp(n, 0, upper);
+    }
+
+    public static int clamp(int n, int lower, int upper) {
+        return (int) clamp((float) n, lower, upper);
+    }
+
+
+    public static float clampWrap(float n, float lower, float upper) {
         float res;
 
         // Cannot take modulus of 0, so workaround is needed. Essentially, take dist between n and bound, find remainder, and count from bound.
@@ -103,5 +112,13 @@ public class NumberButton extends SchuButton {
         }
 
         return res;
+    }
+
+    public static float clampWrap(float n, float upper) {
+        return clampWrap(n, 0, upper);
+    }
+
+    public static int clampWrap(int n, int lower, int upper) {
+        return (int) clampWrap((float) n, lower, upper);
     }
 }

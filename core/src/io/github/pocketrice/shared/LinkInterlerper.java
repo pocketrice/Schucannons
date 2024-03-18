@@ -5,7 +5,6 @@ import com.badlogic.gdx.math.Vector2;
 import io.github.pocketrice.client.ui.Batchable;
 import io.github.pocketrice.client.ui.BatchableException;
 import lombok.Getter;
-import lombok.Setter;
 
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -14,9 +13,7 @@ import java.util.function.Consumer;
 public class LinkInterlerper<T,U> extends Interlerper<T> {
     private BiConsumer<Double, U> linkFunc;
     private Consumer<U> preFunc, postFunc;
-    @Setter
     private U linkObj;
-
 
     public LinkInterlerper(T start, T end) {
         this(start, end, EasingFunction.LINEAR, 0.1);
@@ -26,6 +23,9 @@ public class LinkInterlerper<T,U> extends Interlerper<T> {
         super(start, end, e, ss);
     }
 
+    public LinkInterlerper(Interlerper<T> interlerp) {
+        super(interlerp.getStartVal(), interlerp.getEndVal(), interlerp.getEasing(), interlerp.getStepSize());
+    }
 
     public LinkInterlerper<T,U> linkFunc(BiConsumer<Double, U> func) {
         linkFunc = func;

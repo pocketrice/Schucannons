@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.LinkedList;
 
+import static io.github.pocketrice.client.ui.NumberButton.clamp;
 import static io.github.pocketrice.shared.AnsiCode.*;
 
 @Getter
@@ -118,13 +119,13 @@ public abstract class GameClient {
         }
     }
 
-    public static String fillStr(String str, char c, int len) {
+    public static String fillStr(Object str, char c, int len) {
         return fillStr(Orientation.LEFT, str, c, len);
     }
 
-    public static String fillStr(Orientation or, String str, char c, int len) {
-        StringBuilder sb = new StringBuilder(str);
-        String fill = Character.toString(c).repeat(len - str.length());
+    public static String fillStr(Orientation or, Object str, char c, int len) {
+        StringBuilder sb = new StringBuilder(str.toString());
+        String fill = Character.toString(c).repeat(clamp(len - str.toString().length(), 0, Integer.MAX_VALUE));
         switch (or) {
             case LEFT -> sb.insert(0, fill);
             case RIGHT -> sb.append(fill);

@@ -12,7 +12,7 @@ import static io.github.pocketrice.shared.AnsiCode.*;
 import static io.github.pocketrice.client.BotPlayer.weightedRandom;
 
 @Getter
-public class HumanPlayer extends Player {
+public sealed class HumanPlayer extends Player permits SpectatorPlayer {
     Boolean isVectorMode; // boxed = bad, valve pls fix
 
     public HumanPlayer() {

@@ -145,6 +145,7 @@ public class Fontbook {
     }
 
     public void toggleCoverAware(boolean isAware) {
+        if (isCoverAware == isAware) System.out.println("Cover-aware toggled but no change made — logic error?");
         isCoverAware = isAware;
         textCover = 0; // Reset text cover
     }

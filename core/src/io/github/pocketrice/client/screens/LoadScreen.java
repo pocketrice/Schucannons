@@ -35,10 +35,10 @@ public class LoadScreen extends ScreenAdapter {
     private int updateDeltaFrames, loadDelayFrames;
 
     public LoadScreen(SchuGame sg) {
-        Gdx.graphics.setSystemCursor(Cursor.SystemCursor.Arrow);
         batch = new SpriteBatch();
         camera = new OrthographicCamera();
         game = sg;
+        game.setCursor(Cursor.SystemCursor.Arrow);
         gmgr = sg.getGmgr();
 
         hasStartedLoad = false;
@@ -64,10 +64,11 @@ public class LoadScreen extends ScreenAdapter {
 
     private void loadAssets() {
         amgr.aliasedLoad("models/env64.glb", "modelEnv64", SceneAsset.class);
-        amgr.aliasedLoad("models/cannonball.gltf", "modelCannonProj", SceneAsset.class);
+        amgr.aliasedLoad("models/schucball.glb", "modelCannonProj", SceneAsset.class);
         amgr.aliasedLoad("models/sky_hl2.obj", "modelSky", Model.class);
-        amgr.aliasedLoad("models/schucannon.glb", "modelCannonBarrel", SceneAsset.class);
-        amgr.aliasedLoad("models/schuwheel.obj", "modelCannonWheel", Model.class);
+        amgr.aliasedLoad("models/schucbarrel.glb", "modelCannonBarrel", SceneAsset.class);
+        amgr.aliasedLoad("models/cannon_true.glb", "modelCannonTest", SceneAsset.class);
+        amgr.aliasedLoad("models/schucaxle.glb", "modelCannonAxle", SceneAsset.class);
         amgr.aliasedLoad("textures/main.atlas", "mainAtlas", TextureAtlas.class);
     }
 

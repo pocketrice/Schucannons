@@ -1,6 +1,7 @@
 package io.github.pocketrice.shared;
 
 import com.badlogic.gdx.graphics.Color;
+import com.badlogic.gdx.math.Quaternion;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
 import lombok.Getter;
@@ -39,14 +40,27 @@ public class Interlerper<T> {
         stepSize = computeStepSize(scount); // ...now it's a-ok.
     }
 
+    public <U> LinkInterlerper<T,U> linkise(U linkObj) {
+        LinkInterlerper<T,U> li = new LinkInterlerper<>(this);
+        li.linkObj(linkObj);
+        return li;
+    }
 
     public Interlerper<T> from(T val) {
+        t = 0; // Reset time param
         startVal = val;
         return this;
     }
 
     public Interlerper<T> to(T val) {
+        t = 0; // Reset time param
         endVal = val;
+        return this;
+    }
+
+    public Interlerper<T> type(EasingFunction e, double ss) {
+        easing = e;
+        stepSize = ss;
         return this;
     }
 
@@ -78,6 +92,10 @@ public class Interlerper<T> {
         else if (startVal instanceof Vector3 startVec3) {
             Vector3 endVec3 = (Vector3) endVal;
             result = (T) new Vector3(startVec3.x + (float) easing.apply(t) * (endVec3.x - startVec3.x), startVec3.y + (float) easing.apply(t) * (endVec3.y - startVec3.y), startVec3.z + (float) easing.apply(t) * (endVec3.z - startVec3.z));
+        }
+        else if (startVal instanceof Quaternion startQuat) {
+            Quaternion endQuat = (Quaternion) endVal;
+            result = (T) new Quaternion(startQuat.x + (float) easing.apply(t) * (endQuat.x - startQuat.x), startQuat.y + (float) easing.apply(t) * (endQuat.y - startQuat.y), startQuat.z + (float) easing.apply(t) * (endQuat.z - startQuat.z), startQuat.w + (float) easing.apply(t) * (endQuat.w - startQuat.w));
         }
         else if (startVal instanceof Interlerpable startLerp) {
             result = (T) startLerp.interlerp(t);

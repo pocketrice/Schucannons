@@ -160,7 +160,7 @@ public class GameManager {
         joinInterv.stamp();
     }
 
-    public Match decompilePayload(ServerPayload sp) { // todo: technically pos should be set by GM every frame — need to figure out.
+    public Match decompilePayload(ServerPayload sp) { // todo: technically posOffset should be set by GM every frame — need to figure out.
         Player currPlayer = (sp.getA_playerId() == null) ? null : match.getPlayer(sp.getA_playerId());
         Player oppoPlayer = (sp.getB_playerId() == null) ? null : match.getPlayer(sp.getB_playerId());
 

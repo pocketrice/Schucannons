@@ -19,7 +19,7 @@ import static io.github.pocketrice.client.GameClient.fillStr;
 import static io.github.pocketrice.shared.AnsiCode.*;
 
 @Getter
-public abstract class GameServer {
+public sealed abstract class GameServer permits DedicatedServer, ListenServer {
     List<GameClient> clients;
     LinkedList<Object> outBuffer, inBuffer;
     Server kryoServer;

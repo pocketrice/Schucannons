@@ -14,8 +14,9 @@ public class EvictingList<E> extends ArrayList<E> { // Inspired by Guava impleme
 
     public List<E> evict() { // circular fifo queue-style
         List<E> evicted = new ArrayList<>();
+
         while (this.size() > maxSize) {
-            evicted.add(this.remove(0));
+            evicted.add(this.get(0));
         }
 
         return evicted;
@@ -53,7 +54,7 @@ public class EvictingList<E> extends ArrayList<E> { // Inspired by Guava impleme
 
     @Override
     public boolean equals(Object o) { // Same equals(), just checking maxSize too.
-        EvictingList<E> other = (EvictingList<E>) o;
+        var other = (EvictingList<E>) o;
         return super.equals(o) && this.maxSize == other.maxSize;
     }
 }

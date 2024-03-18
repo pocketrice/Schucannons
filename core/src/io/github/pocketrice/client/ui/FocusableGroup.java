@@ -2,7 +2,7 @@ package io.github.pocketrice.client.ui;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
-import com.badlogic.gdx.graphics.Cursor;
+import io.github.pocketrice.client.SchuGame;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -48,7 +48,7 @@ public class FocusableGroup extends ArrayList<Focusable> { // Similar to BatchGr
 
         if (isEnabled) {
             if (isFocused) {
-                Gdx.graphics.setSystemCursor(Cursor.SystemCursor.None);
+                SchuGame.globalGame().hideCursor();
             }
 
             if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER) && isFocused) {
@@ -63,6 +63,9 @@ public class FocusableGroup extends ArrayList<Focusable> { // Similar to BatchGr
             }
             else if (Gdx.input.isKeyJustPressed(Input.Keys.TAB)) {
                 shiftFocus(!Gdx.input.isKeyPressed(Input.Keys.SHIFT_LEFT)); // LSHIFT modifier = back, none = forward — just like browser!s
+            }
+            else if (Gdx.input.isKeyJustPressed(Input.Keys.UP) || Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
+                shiftFocus(Gdx.input.isKeyJustPressed(Input.Keys.DOWN));
             }
             else if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE) || isFocused && (Gdx.input.getDeltaX() != 0 || Gdx.input.getDeltaY() != 0)) {
                 exitFocus();
@@ -105,7 +108,7 @@ public class FocusableGroup extends ArrayList<Focusable> { // Similar to BatchGr
             areStable.set(focusIndex, false); // Destabilise old focusable
         }
         focusIndex = -1; // Stable
-        Gdx.graphics.setSystemCursor(Cursor.SystemCursor.Arrow);
+        SchuGame.globalGame().restoreCursor();
 
         isFocused = false;
     }

@@ -6,7 +6,6 @@ import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.*;
-import com.badlogic.gdx.graphics.Cursor.SystemCursor;
 import com.badlogic.gdx.graphics.Pixmap.Format;
 import com.badlogic.gdx.graphics.Texture.TextureFilter;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -19,7 +18,6 @@ import com.badlogic.gdx.graphics.g3d.decals.DecalBatch;
 import com.badlogic.gdx.graphics.g3d.environment.DirectionalLight;
 import com.badlogic.gdx.graphics.g3d.loader.G3dModelLoader;
 import com.badlogic.gdx.graphics.g3d.loader.ObjLoader;
-import com.badlogic.gdx.graphics.g3d.utils.CameraInputController;
 import com.badlogic.gdx.graphics.g3d.utils.MeshPartBuilder;
 import com.badlogic.gdx.graphics.g3d.utils.ModelBuilder;
 import com.badlogic.gdx.graphics.g3d.utils.shapebuilders.SphereShapeBuilder;
@@ -45,6 +43,7 @@ import lombok.Getter;
 import lombok.Setter;
 import net.mgsx.gltf.loaders.glb.GLBLoader;
 import net.mgsx.gltf.loaders.gltf.GLTFLoader;
+import net.mgsx.gltf.scene3d.scene.SceneAsset;
 import org.javatuples.Pair;
 import org.javatuples.Triplet;
 
@@ -59,9 +58,10 @@ import static io.github.pocketrice.client.ui.FocusableGroup.wrapIndex;
 // Turns backend logic into glorious rendering. As in, take crap from GameManager that's from the server and move stuff around. All rendering is ONLY in this class.
 // This should only be used for GameScreen.
 public class GameRenderer {
-    public static final Vector3 CAMERA_POS = new Vector3(0f, 2f, 0f), CAMERA_LOOK = new Vector3(0f, 0f, 5f);
+    public static final Vector3 CAMERA_POS = new Vector3(0f, 0f, 0f), CAMERA_LOOK = new Vector3(0f, 0f, 1f);
     public static final float CHAIN_TAP_SEC = 0.75f, DEBUG_PERSP_CULL_DIST = 0.5f;
 
+    SchuGame game;
     ModelGroup cannonA, cannonB;
     ModelInstance envMi, projMi, skyMi;
     ModelBatch modelBatch;
@@ -81,9 +81,9 @@ public class GameRenderer {
     @Getter
     Camera gameCam;
     @Getter
-    CameraInputController inputCic;
+    SchuCameraInput inputSic;
     @Getter
-    InputAdapter inputKbAdapter;
+    InputAdapter inputKbic;
     @Getter
     InputMultiplexer inputMult;
     HUD hud;
@@ -103,12 +103,13 @@ public class GameRenderer {
     DecalBatch dpBatch;
 
     int dpRenderType;
-    boolean isPaused, isPauseFirstPass, isEffectsUpdated, isDebugInterp;
+    boolean isPauseFirstPass, isEffectsUpdated, isDebugInterp, isDebugFlattened; // <- as in, measuring 2d pixels now
     @Getter @Setter
     boolean isPromptBlur;
 
 
     public GameRenderer(GameManager gm) {
+        game = SchuGame.globalGame();
         amgr = gm.getAmgr();
         gmgr = gm;
         audiobox = amgr.getAudiobox();
@@ -118,18 +119,20 @@ public class GameRenderer {
         envMi = new ModelInstance(amgr.aliasedGet("modelSky", Model.class));
         envMi.transform.scl(5f);
         envMi.transform.rotate(Vector3.X, 180f);
-        projMi = new ModelInstance(amgr.aliasedGet("modelCannonWheel", Model.class));
+        projMi = new ModelInstance(amgr.aliasedGet("modelCannonProj", SceneAsset.class).scene.model);
 
         cannonA = new ModelGroup();
         cannonA.setGroupName("cannonA");
+        cannonA.setInterp(true);
        // cannonA.addSubmodel(amgr.aliasedGet("modelCannonBarrel", SceneAsset.class).scene.model, Vector3.Zero, new Quaternion());
-        cannonA.addSubmodel(amgr.aliasedGet("modelCannonWheel", Model.class), new Vector3(0f, -0.05f, 0.05f), new Quaternion());
-        cannonA.addSubmodel(amgr.aliasedGet("modelCannonWheel", Model.class), new Vector3( 0f, -0.05f, -0.05f)/*new Vector3(0.1f, -0.05f, 0.1f)*/, new Quaternion(Vector3.Y, (float) (Math.PI * 2)));
+        cannonA.addSubmodel(amgr.aliasedGet("modelCannonTest", SceneAsset.class).scene.model, new Vector3(), new Quaternion());
+       // cannonA.addSubmodel(amgr.aliasedGet("modelCannonAxle", SceneAsset.class).scene.model, Vector3.Zero.cpy(), new Quaternion(Vector3.Y, (float) (Math.PI * 2)));
         cannonA.applyOffsets();
         cannonA.translate(new Vector3(50f, 0, 0));
         // cannonA.scl(5f); // tip: getTranslation is not distance from that particular vec3... it instead stores it in the passed-in vec. Oups! 1 hour debugging.
 
         cannonB = cannonA.cpy();
+        cannonB.setInterp(true);
         cannonB.setGroupName("cannonB");
         //projMi.transform.scl(10f);
 
@@ -153,87 +156,109 @@ public class GameRenderer {
         gameCam.near = 0.1f;
         gameCam.far = 500f;
         gameCam.update();
-        inputCic = new CameraInputController(gameCam);
-        inputKbAdapter = new InputAdapter() {
+        inputSic = new SchuCameraInput(gameCam);
+        inputKbic = new InputAdapter() {
             final IntSet downKeys = new IntSet(20);
-            final Interlerper<Float> interlerpDebugOpacity = new Interlerper<>(1f, 0f);
 
             @Override
             public boolean keyDown(int keycode) {
+                boolean isKeyed = true;
+
                 switch (keycode) {
                     case Keys.F3 -> {
-                        SchuGame game = SchuGame.globalGame();
-                        game.setDebug(!game.isDebug);
-                        Gdx.graphics.setSystemCursor(SystemCursor.Arrow); // To avoid memory cost (of running a tad of code...). Note that cursor is set to NONE if debug is enabled so this is overwritten.
+                        game.setDebug(!game.isDebug); // To avoid memory cost (of running a tad of code...). Note that cursor is set to NONE if debug is enabled so this is overwritten.
+                        //if (!game.isDebug) inputSic.camLock(true); // stupid patchwork fix
                     }
 
-                    case Keys.SHIFT_LEFT ->  {
-                        SchuGame game = SchuGame.globalGame();
-                        if (game.isDebug) {
-                            inputMult.removeProcessor(inputCic);
-                        }
-                    }
+//                    case Keys.SHIFT_RIGHT ->  {
+//                        if (game.isDebug) {
+//                            processDebugFlatten(!isDebugFlattened);
+//                        }
+//                    }
 
                     case Keys.ESCAPE -> {
-                        isPaused = !isPaused;
+                        game.setPaused(!game.isPaused); // Invert pause status
                         isPauseFirstPass = true;
 
-                        if (isPaused) {
+                        if (game.isPaused) {
                             audiobox.playSfx("hitsound", 1f);
-                            Gdx.input.setInputProcessor(inputKbAdapter);
+                            Gdx.input.setInputProcessor(inputKbic);
+                            inputSic.camLock(false);
                         } else {
                             audiobox.playSfx("vote_started", 0.5f);
                             Gdx.input.setInputProcessor(inputMult);
+                            inputSic.camLock(true);
                         }
                     }
 
                     case Keys.TAB -> {
                         System.out.println("plist now!11!1!");
                     }
+
+                    default -> {
+                        isKeyed = false;
+                    }
                 }
 
                 // sourc'd
                 downKeys.add(keycode);
                 if (downKeys.size >= 2) {
-                    onMultipleKeysDown(keycode);
+                    if (!isKeyed) isKeyed = onMultipleKeysDown(keycode);
                 }
-                return true;
+
+                return isKeyed;
             }
 
-            @Override
-            public boolean keyUp(int keycode) {
-                switch (keycode) {
-                    case Keys.SHIFT_LEFT -> {
-                        SchuGame game = SchuGame.globalGame();
-                        if (game.isDebug) {
-                            inputMult.addProcessor(1, inputCic);
-                        }
-                    }
-                }
-                downKeys.remove(keycode);
-                return true;
-            }
+//            @Override
+//            public boolean keyUp(int keycode) {
+//                boolean isKeyed = true;
+//
+//                switch (keycode) {
+////                    case Keys.SHIFT_RIGHT -> {
+////                        SchuGame game = SchuGame.globalGame();
+////                        if (game.isDebug) {
+////                            inputMult.addProcessor(2, inputSic);
+////                        }
+////                    }
+//
+//                    default -> {
+//                        isKeyed = false;
+//                    }
+//                }
+//                downKeys.remove(keycode);
+//                return isKeyed;
+//            }
 
-            private void onMultipleKeysDown(int mostRecentKeycode) {
+            private void processDebugFlatten(boolean isFlattened) {
+                isDebugFlattened = isFlattened;
+
+                if (isDebugFlattened) {
+                    inputSic.purge();
+                    inputMult.removeProcessor(inputSic);
+                } else {
+                    inputMult.addProcessor(2, inputSic);
+                }
+            }
+            private boolean onMultipleKeysDown(int mostRecentKeycode) {
+                return false;
             }
         };
 
-        inputMult = new InputMultiplexer(hud.getStage(), inputCic, inputKbAdapter);
+        inputMult = new InputMultiplexer(hud.getStage(), inputKbic, inputSic);
 
         env = new Environment();
         env.set(new ColorAttribute(ColorAttribute.AmbientLight, 0.5f, 0.5f, 0.7f, 0.8f));
         env.add(new DirectionalLight().set(0.4f, 0.4f, 0.55f, -1f, 0.3f, 0f));
         env.add(new DirectionalLight().set(0.4f, 0.4f, 0.4f, 0f, 0.5f, 0f));
 
-        isPaused = false;
         isPromptBlur = false;
         isEffectsUpdated = false;
         isDebugInterp = false;
+        isDebugFlattened = false;
 
-        //dpBatch = new DecalBatch(100, new CameraGroupStrategy(gameCam));
         debugPersps = new ArrayDeque<>();
-        dpModelCache = new EvictingMap<>(10);
-        dpDecalCache = new EvictingMap<>(10);
+        dpModelCache = new EvictingMap<>(128);
+        dpDecalCache = new EvictingMap<>(128);
         dpExitInterv = new Interval(CHAIN_TAP_SEC);
         dpRenderType = DebugPerspRenderType.NONE_TOTAL;
         dpBuilder = new ModelBuilder();
@@ -245,9 +270,9 @@ public class GameRenderer {
     public void render() {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
         gameCam.update();
-        inputCic.update();
+        inputSic.update();
 
-        if (isPaused) {
+        if (game.isPaused) {
             fbo.begin();
             renderScene();
             fbo.end();
@@ -298,11 +323,13 @@ public class GameRenderer {
         ScreenUtils.clear(Color.valueOf("#4d4a71"), true);
         modelBatch.begin(gameCam);
         modelBatch.render(envMi, env);
-        cannonA.getSubmodel(0).transform.setFromEulerAngles(0, 0, -hud.getTheta());
+      //  cannonA.setSubrot(0, ModelGroup.eulerToQuat(new Vector3(0, hud.getTheta(), 0)));
         gmgr.getClient().getSelf().setProjVector(sphericalToRect(hud.getMag(), degToRad(hud.getTheta()), Math.PI / 2f));
-        cannonA.render(modelBatch);
-        cannonB.getSubmodel(0).transform.setFromEulerAngles(0, 0, -hud.getTheta());
-        cannonB.render(modelBatch);
+//        cannonA.update();
+//        cannonA.render(modelBatch);
+       cannonB.setSubrot(0, ModelGroup.eulerToQuat(new Vector3(0, hud.getTheta(), 0)));
+       cannonB.update();
+       cannonB.render(modelBatch);
         modelBatch.render(projMi, env);
         modelBatch.end();
 
@@ -331,7 +358,7 @@ public class GameRenderer {
             } else if (Gdx.input.isKeyJustPressed(Keys.BACKSPACE)) { // ** Remove current DP, or if chain 2x remove all DP
                 if (dpExitInterv.observe()) {
                     debugPersps.clear();
-                    audiobox.playSfx("unitismovingin", 1f);
+                    audiobox.playSfx("cs_plant", 1f);
                 } else {
                     dpExitInterv.stamp();
                     debugPersps.poll(); // Remove from queue
@@ -516,7 +543,7 @@ public class GameRenderer {
         float theta = (rho == 0) ? 0 : (float) Math.atan(pstate[1].y / pstate[1].x); // tan(θ) = y/x
         float phi = (float) ((rho == 0) ? Math.PI : Math.acos(pstate[1].z / rho)); // cos(φ) = z / ρ
 
-        playerModel.getSubmodel(0).transform.rotate(new Quaternion(Vector3.Y, (float) (Math.PI - phi))); // Replace barrel meshpart with rotated meshpart (π - φ for complement b/c cannon defaults to laying horizontally).
+        playerModel.submodels.valueAt(0).transform.rotate(new Quaternion(Vector3.Y, (float) (Math.PI - phi))); // Replace barrel meshpart with rotated meshpart (π - φ for complement b/c cannon defaults to laying horizontally).
         playerModel.rotate(new Quaternion(Vector3.Z, theta));
     }
 
@@ -557,6 +584,10 @@ public class GameRenderer {
 
         if (matchState.getOppoPlayer() != null) {
             transformModel(cannonB, matchState.getOppoPlayer().getPlayerId());
+        }
+
+        if (game.isCursorLocked) { // Update loop implementation of SchuGame's "cursor lock" (no update loop there. I don't want 5 different loops :>)
+            Gdx.input.setCursorPosition((int) game.cursorLockPos.x, (int) game.cursorLockPos.y);
         }
     }
 

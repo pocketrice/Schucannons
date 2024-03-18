@@ -12,7 +12,7 @@ public class Interval {
     /**
      * Constant to be used with Interval instantiation to represent "infinite observable".
      */
-    public static final float INFINITE = 9999999f;
+    public static final float INFINITE = 999999f;
     Instant startTime;
     boolean justStamped, justEnded;
     @Getter

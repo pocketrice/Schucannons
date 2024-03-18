@@ -21,7 +21,7 @@ import java.util.LinkedList;
 import java.util.UUID;
 
 // A listenserver runs on the local machine; it should only run 1 MATCH. So, it can be slightly optimised.
-public class ListenServer extends GameServer {
+public final class ListenServer extends GameServer {
     Match m;
     GameSimulator gsim;
 

@@ -9,7 +9,7 @@ import java.util.UUID;
 
 
 @Getter
-public abstract class Player {
+public sealed abstract class Player permits HumanPlayer, BotPlayer {
     @Setter
     int health = 0;
     @Setter

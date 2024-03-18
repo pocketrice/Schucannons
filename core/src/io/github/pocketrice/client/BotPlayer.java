@@ -14,7 +14,7 @@ import java.util.stream.DoubleStream;
 import static io.github.pocketrice.shared.AnsiCode.ANSI_RESET;
 
 @Getter
-public class BotPlayer extends Player {
+public final class BotPlayer extends Player {
     int difficulty;
     @Getter
     boolean isDummy;
