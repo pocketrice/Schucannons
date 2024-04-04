@@ -15,7 +15,7 @@
 
 <p align="center">
   <br>
-LibGDX projectile motion cannon game and AP Physics 1 teaching aid for IB CS HL Y2 Internal Assessment.
+LibGDX turn-based Ottoman-era projectile motion cannoneering game (+ AP Physics 1 teaching aid) for IB CS HL Y2 Internal Assessment.
   <br><br>
 
 
