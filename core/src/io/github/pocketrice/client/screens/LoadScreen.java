@@ -18,7 +18,7 @@ import net.mgsx.gltf.scene3d.scene.SceneAsset;
 
 public class LoadScreen extends ScreenAdapter {
     private static final int UPDATE_FRAME_COUNT = 60;
-    private static final int LOAD_DELAY_FRAME_COUNT = 300;
+    private static final int LOAD_DELAY_FRAME_COUNT = 0;
 
     private Audiobox audiobox;
     private Fontbook fontbook;
@@ -64,11 +64,12 @@ public class LoadScreen extends ScreenAdapter {
 
     private void loadAssets() {
         amgr.aliasedLoad("models/env64.glb", "modelEnv64", SceneAsset.class);
-        amgr.aliasedLoad("models/schucball.glb", "modelCannonProj", SceneAsset.class);
+        //amgr.aliasedLoad("models/schucball.glb", "modelCannonProj", SceneAsset.class);
         amgr.aliasedLoad("models/sky_hl2.obj", "modelSky", Model.class);
-        amgr.aliasedLoad("models/schucbarrel.glb", "modelCannonBarrel", SceneAsset.class);
+        amgr.aliasedLoad("models/sky_hl2.glb", "gltfSky", SceneAsset.class);
+      //  amgr.aliasedLoad("models/schucbarrel.glb", "modelCannonBarrel", SceneAsset.class);
         amgr.aliasedLoad("models/cannon_true.glb", "modelCannonTest", SceneAsset.class);
-        amgr.aliasedLoad("models/schucaxle.glb", "modelCannonAxle", SceneAsset.class);
+      //  amgr.aliasedLoad("models/schucaxle.glb", "modelCannonAxle", SceneAsset.class);
         amgr.aliasedLoad("textures/main.atlas", "mainAtlas", TextureAtlas.class);
     }
 

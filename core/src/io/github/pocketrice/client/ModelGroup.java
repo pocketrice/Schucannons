@@ -6,27 +6,35 @@ import com.badlogic.gdx.graphics.g3d.ModelInstance;
 import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Quaternion;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.utils.Disposable;
 import io.github.pocketrice.shared.EasingFunction;
 import io.github.pocketrice.shared.EvictingMap;
 import lombok.Setter;
 import org.apache.commons.lang3.function.TriConsumer;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
-public class ModelGroup {
+public class ModelGroup implements Disposable {
     EvictingMap<String, ModelInstance> submodels;
     List<ModelMeta> submetas;
+    Set<Disposable> disposeSet;
     @Setter
     String groupName;
     @Setter
     boolean isOffsetApplied, isInterp;
 
     public ModelGroup() {
-        this(new Model[0]);
+        submodels = new EvictingMap<>(999); // note ~ using EvictingMap for ability to get @ indices... limit is not intentional.
+        submetas = new ArrayList<>();
+        disposeSet = new HashSet<>();
+        isOffsetApplied = false;
+        isInterp = true;
     }
+
     public ModelGroup(Model... models) {
         this(models, generateUArr(new ModelMeta[models.length], ModelMeta.class));
     }
@@ -36,12 +44,19 @@ public class ModelGroup {
     }
 
     public ModelGroup(Model[] ms, ModelMeta[] mms) {
-        this(Arrays.stream(ms).map(ModelInstance::new).toArray(ModelInstance[]::new), mms);
+        this();
+
+        for (int i = 0; i < ms.length; i++) {
+            addSubmodel(ms[i], mms[i].posOffset(), mms[i].rotOffset());
+        }
+
+        isOffsetApplied = false;
+        isInterp = true;
+
     }
 
     public ModelGroup(ModelInstance[] mis, ModelMeta[] mms) {
-        submodels = new EvictingMap<>(100);
-        submetas = new ArrayList<>();
+        this();
 
         for (int i = 0; i < mis.length; i++) {
             addSubmodel(mis[i], mms[i].posOffset(), mms[i].rotOffset());
@@ -52,6 +67,7 @@ public class ModelGroup {
     }
 
     public void addSubmodel(Model model, Vector3 pOff, Quaternion rOff) {
+        disposeSet.add(model);
         addSubmodel(new ModelInstance(model), pOff, rOff);
     }
 
@@ -74,8 +90,6 @@ public class ModelGroup {
         isOffsetApplied = true;
     }
 
-
-
     public void update() { // Per-tick updates
         for (int i = 0; i < submodels.size(); i++) {
             ModelMeta submeta = submetas.get(i);
@@ -97,7 +111,8 @@ public class ModelGroup {
     }
 
     public void rotate(Quaternion rot) { // Additive (+)
-        if (!isOffsetApplied) System.err.println("Warning: ModelGroup " + groupName + " offsets not applied — may be inaccurate!");
+        if (!isOffsetApplied)
+            System.err.println("Warning: ModelGroup " + groupName + " offsets not applied — may be inaccurate!");
         for (int i = 0; i < submodels.size(); i++) {
             subrotate(i, rot);
         }
@@ -129,7 +144,8 @@ public class ModelGroup {
     }
 
     public void translate(Vector3 pos) { // Additive (+)
-        if (!isOffsetApplied) System.err.println("Warning: ModelGroup " + groupName + " offsets not applied — may be inaccurate!");
+        if (!isOffsetApplied)
+            System.err.println("Warning: ModelGroup " + groupName + " offsets not applied — may be inaccurate!");
         for (int i = 0; i < submodels.size(); i++) {
             subtranslate(i, pos);
         }
@@ -160,7 +176,8 @@ public class ModelGroup {
     }
 
     public void scl(float scalar) { // Additive (+)
-        if (!isOffsetApplied) System.err.println("Warning: ModelGroup " + groupName + " offsets not applied — may be inaccurate!");
+        if (!isOffsetApplied)
+            System.err.println("Warning: ModelGroup " + groupName + " offsets not applied — may be inaccurate!");
         for (int i = 0; i < submodels.size(); i++) {
             subscl(i, scalar);
         }
@@ -242,5 +259,10 @@ public class ModelGroup {
         }
 
         return arr;
+    }
+
+    @Override
+    public void dispose() {
+        disposeSet.forEach(Disposable::dispose);
     }
 }

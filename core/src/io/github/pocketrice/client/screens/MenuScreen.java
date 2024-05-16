@@ -129,6 +129,7 @@ public class MenuScreen extends ScreenAdapter {
                     focMatchlist.add(schub);
                 });
 
+
                 System.out.println(ANSI_PURPLE + "\n\n-ˏˋ⋆ btns loaded ya luv " + Flavour.random(FlavourType.LUVS) + "/ ⋆ˊˎ-\n\n" + ANSI_RESET);
                 isUILoaded = true;
             }

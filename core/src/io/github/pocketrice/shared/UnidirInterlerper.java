@@ -2,8 +2,8 @@ package io.github.pocketrice.shared;
 
 import lombok.Getter;
 
+@Getter
 public class UnidirInterlerper<T> extends Interlerper<T> {
-    @Getter
     boolean isUnidirForward;
 
     public UnidirInterlerper(T start, T end) {
