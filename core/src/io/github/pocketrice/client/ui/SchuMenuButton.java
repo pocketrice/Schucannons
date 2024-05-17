@@ -6,7 +6,6 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle;
 import io.github.pocketrice.client.GameManager;
-import io.github.pocketrice.client.SchuAssetManager;
 import io.github.pocketrice.client.SchuGame;
 import io.github.pocketrice.client.screens.LoadScreen;
 import io.github.pocketrice.client.ui.Batchable.InterlerpPreset;
@@ -21,9 +20,8 @@ import java.util.UUID;
 public class SchuMenuButton extends SchuButton {
     Label labelMatchPeek;
 
-    public SchuMenuButton(String text, TextButtonStyle tbs, GameManager gm, SchuAssetManager sam) {
-        super(text.split("\\|")[1], tbs, sam);
-        amgr = sam;
+    public SchuMenuButton(String text, TextButtonStyle tbs, GameManager gm) {
+        super(text.split("\\|")[1], tbs);
 
         LabelStyle styleLabelPeek = new LabelStyle(); // Anonymous labels are used.
         styleLabelPeek.font = fontbook.getSizedBitmap("koholint", 20);

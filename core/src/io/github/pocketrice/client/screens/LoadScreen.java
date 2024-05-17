@@ -16,9 +16,11 @@ import io.github.pocketrice.client.Flavour.FlavourType;
 import io.github.pocketrice.client.ui.BatchableException;
 import net.mgsx.gltf.scene3d.scene.SceneAsset;
 
+import java.io.InvalidObjectException;
+
 public class LoadScreen extends ScreenAdapter {
     private static final int UPDATE_FRAME_COUNT = 60;
-    private static final int LOAD_DELAY_FRAME_COUNT = 0;
+    private static final int LOAD_DELAY_FRAME_COUNT = 10;
 
     private Audiobox audiobox;
     private Fontbook fontbook;
@@ -67,8 +69,10 @@ public class LoadScreen extends ScreenAdapter {
         //amgr.aliasedLoad("models/schucball.glb", "modelCannonProj", SceneAsset.class);
         amgr.aliasedLoad("models/sky_hl2.obj", "modelSky", Model.class);
         amgr.aliasedLoad("models/sky_hl2.glb", "gltfSky", SceneAsset.class);
+        amgr.aliasedLoad("models/cannon_new/cannon_brl.obj", "modelCannonBrl", Model.class);
+        amgr.aliasedLoad("models/cannon_new/cannon_leg.obj", "modelCannonLeg", Model.class);
       //  amgr.aliasedLoad("models/schucbarrel.glb", "modelCannonBarrel", SceneAsset.class);
-        amgr.aliasedLoad("models/cannon_true.glb", "modelCannonTest", SceneAsset.class);
+       // amgr.aliasedLoad("models/cannon_true.glb", "modelCannonTest", SceneAsset.class);
       //  amgr.aliasedLoad("models/schucaxle.glb", "modelCannonAxle", SceneAsset.class);
         amgr.aliasedLoad("textures/main.atlas", "mainAtlas", TextureAtlas.class);
     }
@@ -84,7 +88,11 @@ public class LoadScreen extends ScreenAdapter {
         amgr.update();
 
         if (amgr.isFinished() && gmgr.isClientConnected() && loadDelayFrames > LOAD_DELAY_FRAME_COUNT) {
-            grdr = new GameRenderer(gmgr);
+            try {
+                grdr = new GameRenderer(gmgr);
+            } catch (InvalidObjectException e) {
+                throw new RuntimeException(e);
+            }
             gmgr.setGrdr(grdr);
             game.setGrdr(grdr);
 

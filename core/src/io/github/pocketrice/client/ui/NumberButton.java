@@ -2,33 +2,33 @@ package io.github.pocketrice.client.ui;
 
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
-import io.github.pocketrice.client.SchuAssetManager;
 import io.github.pocketrice.shared.EasingFunction;
 import io.github.pocketrice.shared.LinkInterlerper;
+import lombok.Getter;
 
 import java.util.List;
 
 public class NumberButton extends SchuButton {
     Label label;
-
     boolean isIncrement, isWrapping;
-    float upperBound, lowerBound, value, stepSize;
+    float upperBound, lowerBound, step;
+    @Getter
+    float value;
     String suffix;
 
-    public NumberButton(String s, TextButtonStyle tbs, Label l, SchuAssetManager am) {
-        this(true, true, s, tbs, 9, 0, 1, l, am);
+    public NumberButton(String str, TextButtonStyle tbs, Label l) {
+        this(1, true, str, tbs, 9, 0, l);
     }
-    public NumberButton(boolean isIncr, boolean isWrap, String s, TextButtonStyle tbs, float upper, float lower, float ss, Label l, SchuAssetManager am) {
-        super((isIncr) ? "+" : "-", tbs, (isIncr) ? "slide_up" : "slide_down", "", "", "", 0, 0, am);
-        amgr = am;
+    public NumberButton(float s, boolean isWrap, String str, TextButtonStyle tbs, float upper, float lower, Label l) {
+        super((s > 0) ? "+" : "-", tbs, (s > 0) ? "slide_up" : "slide_down", "", "", "", 0, 0);
 
         value = 0f;
-        isIncrement = isIncr;
+        isIncrement = s > 0;
         isWrapping = isWrap;
-        suffix = s;
+        suffix = str;
         upperBound = upper;
         lowerBound = lower;
-        stepSize = ss;
+        step = s;
         label = l;
 
         this.setStyle(tbs);
@@ -53,9 +53,9 @@ public class NumberButton extends SchuButton {
 
             float newVal;
             if (isIncrement) {
-                newVal = (value == upperBound) ? lowerBound : value + stepSize;  // "extra" wrap since clampWrap() can't account for relative
+                newVal = (value == upperBound) ? lowerBound : value + step;  // "extra" wrap since clampWrap() can't account for relative
             } else {
-                newVal = (value == lowerBound) ? upperBound : value - stepSize; // same bestie
+                newVal = (value == lowerBound) ? upperBound : value + step; // same bestie
             }
 
             value = (isWrapping) ? clampWrap(newVal, lowerBound, upperBound) : clamp(newVal, lowerBound, upperBound);

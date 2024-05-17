@@ -12,6 +12,7 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import io.github.pocketrice.client.Audiobox;
 import io.github.pocketrice.client.Fontbook;
 import io.github.pocketrice.client.SchuAssetManager;
+import io.github.pocketrice.client.SchuGame;
 import io.github.pocketrice.client.ui.Batchable.InterlerpPreset;
 import io.github.pocketrice.shared.EasingFunction;
 import io.github.pocketrice.shared.Interlerper;
@@ -36,8 +37,8 @@ public class SchuButton extends TextButton implements Focusable {
     List<Object> activeObjs;
     String sfxUp, sfxDown, sfxEnter, sfxExit;
 
-    public SchuButton(String text, TextButtonStyle tbs, SchuAssetManager am) {
-        this(text, tbs, "buttonclick", "buttonclickrelease", "hint", "", 0, 0, am);
+    public SchuButton(String text, TextButtonStyle tbs) {
+        this(text, tbs, "buttonclick", "buttonclickrelease", "hint", "", 0, 0);
     }
 
     public SchuButton minX(float x) {
@@ -109,9 +110,9 @@ public class SchuButton extends TextButton implements Focusable {
         });
     }
 
-    public SchuButton(String text, TextButtonStyle tbs, String sfxUp, String sfxDown, String sfxEnter, String sfxExit, float minX, float minY, SchuAssetManager am) {
-        super(text, am.get("skins/onett/skin/terra-mother-ui.json", Skin.class));
-        amgr = am;
+    public SchuButton(String text, TextButtonStyle tbs, String sfxUp, String sfxDown, String sfxEnter, String sfxExit, float minX, float minY) {
+        super(text, SchuGame.globalAmgr().get("skins/onett/skin/terra-mother-ui.json", Skin.class));
+        amgr = SchuGame.globalAmgr();
         inactiveFunc = (objs) -> {};
         audiobox = amgr.getAudiobox();
         fontbook = amgr.getFontbook();

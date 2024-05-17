@@ -128,6 +128,10 @@ public class Interlerper<T> {
         return (long) ((1.0 - t) / stepSize);  // Formula is [remaining "t"] / stepSize. Clamping to 0 is already predone :D
     }
 
+    public boolean isTerminated() {
+        return (t == 1f || t == 0f);
+    }
+
     public double computeStepSize(long steps) { // Compute step size needed to complete interlerp in given step count (effectively, ensuring interlerp time taken is a-ok, but the time scales)
         return (1.0 - t) / steps; // A rewriting of remainingSteps formula, solving for SS instead of TS.
     }

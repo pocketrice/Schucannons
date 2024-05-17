@@ -98,10 +98,8 @@ public class ModelGroup implements Disposable {
             Quaternion rot = new Quaternion().mul(submeta.rotOffset()).mul(submeta.interpRot().advance());
             transform.setFromEulerAngles(rot.getYaw(), rot.getPitch(), rot.getRoll());
             transform.setTranslation(new Vector3().add(submeta.posOffset()).add(submeta.interpPos().advance()));
-            System.out.println(this);
+           // System.out.println(this);
         }
-
-        System.out.println("\n");
     }
 
     public void render(ModelBatch mb) {
@@ -224,7 +222,7 @@ public class ModelGroup implements Disposable {
 
     @Override
     public String toString() {
-        return groupName + "{" + submodels.entrySet().stream().map(sm -> sm.getKey() + "[" + sm.getValue().transform.getRotation(new Quaternion()) + "/" + sm.getValue().transform.getTranslation(Vector3.Zero) + "]").collect(Collectors.joining(", ")) + " }";
+        return groupName + " {" + submodels.entrySet().stream().map(sm -> sm.getKey() + "[" + sm.getValue().transform.getRotation(new Quaternion()) + "/" + sm.getValue().transform.getTranslation(Vector3.Zero) + "]").collect(Collectors.joining(", ")) + " }";
     }
 
     // Adapted from LibGDX's own setEulerAnglesRad implementation

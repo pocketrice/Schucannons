@@ -40,11 +40,10 @@ import lombok.Getter;
 import lombok.Setter;
 import net.mgsx.gltf.loaders.glb.GLBLoader;
 import net.mgsx.gltf.loaders.gltf.GLTFLoader;
-import net.mgsx.gltf.scene3d.scene.Scene;
-import net.mgsx.gltf.scene3d.scene.SceneAsset;
 import org.javatuples.Pair;
 import org.javatuples.Triplet;
 
+import java.io.InvalidObjectException;
 import java.util.*;
 
 import static com.badlogic.gdx.graphics.Pixmap.Format.RGBA8888;
@@ -60,7 +59,7 @@ public class GameRenderer {
     public static final float CHAIN_TAP_SEC = 0.75f, DEBUG_PERSP_CULL_DIST = 0.5f;
 
     SchuGame game;
-    SceneGroup cannonA, cannonB;
+    ModelGroup cannonA, cannonB;
     ModelInstance envMi, projMi, skyMi;
     ModelBatch modelBatch;
 
@@ -100,9 +99,6 @@ public class GameRenderer {
     MeshPartBuilder dpPartBuilder;
     DecalBatch dpBatch;
 
-    GameScene gscene;
-    SceneGroup sgCannonA;
-
     int dpRenderType;
     boolean isPauseFirstPass, isEffectsUpdated, isDebugInterp, isDebugFlattened; // <- as in, measuring 2d pixels now
     @Getter @Setter
@@ -110,7 +106,7 @@ public class GameRenderer {
 
 
 
-    public GameRenderer(GameManager gm) {
+    public GameRenderer(GameManager gm) throws InvalidObjectException {
         game = SchuGame.globalGame();
         amgr = gm.getAmgr();
         gmgr = gm;
@@ -121,33 +117,24 @@ public class GameRenderer {
         envMi = new ModelInstance(amgr.aliasedGet("modelSky", Model.class));
         envMi.transform.scl(5f);
         envMi.transform.rotate(Vector3.X, 180f);
-        projMi = new ModelInstance(amgr.aliasedGet("modelCannonTest", SceneAsset.class).scene.model);
+        projMi = new ModelInstance(amgr.aliasedGet("modelCannonLeg", Model.class));
+        projMi.transform.scl(0.01f);
 
-        cannonA = new SceneGroup();
+        cannonA = new ModelGroup();
         cannonA.setGroupName("cannonA");
         cannonA.setInterp(true);
-       // cannonA.addSubmodel(amgr.aliasedGet("modelCannonBarrel", SceneAsset.class).scene.model, Vector3.Zero, new Quaternion());
-        cannonA.addScene("barrel", amgr.aliasedGet("modelCannonTest", SceneAsset.class), Vector3.Zero, new Quaternion());
-       // cannonA.addSubmodel(amgr.aliasedGet("modelCannonAxle", SceneAsset.class).scene.model, Vector3.Zero.cpy(), new Quaternion(Vector3.Y, (float) (Math.PI * 2)));
+        cannonA.addSubmodel(amgr.aliasedGet("modelCannonBrl", Model.class), Vector3.Zero, new Quaternion());
+        cannonA.addSubmodel(amgr.aliasedGet("modelCannonLeg", Model.class), Vector3.Zero.cpy(), new Quaternion(Vector3.Y, (float) (Math.PI * 2)));
         cannonA.applyOffsets();
-        cannonA.translate(new Vector3(50f, 0, 0));
+        cannonA.translate(new Vector3(0f, 0, 0));
         // cannonA.scl(5f); // tip: getTranslation is not distance from that particular vec3... it instead stores it in the passed-in vec. Oups! 1 hour debugging.
 
         cannonB = cannonA.cpy();
         cannonB.setInterp(true);
+        cannonB.setPos(new Vector3(20f, 0f, 0));
+        cannonB.applyOffsets();
         cannonB.setGroupName("cannonB");
         //projMi.transform.scl(10f);
-
-        gscene = new GameScene();
-        //sgCannonA = new SceneGroup(cannonA);
-        Scene scene = GameScene.extractScene(amgr.aliasedGet("modelCannonTest", SceneAsset.class));
-        //gscene.add(sgCannonA);
-        gscene.add(scene);
-       // gscene.add(amgr.aliasedGet("gltfSky", SceneAsset.class));
-        gscene.setLights();
-        gscene.testCubemaps();
-       // gscene.setCubemaps("hls_env", "hls_diff", "hls_spec", Gdx.files.internal("textures/skybox/hls_brdf"));
-       // gscene.add(envMi);
 
         postBatch = new SpriteBatch();
         postprocBlur = new BlurPostProcessor(15, 4f, 0.3f, postBatch);
@@ -169,7 +156,7 @@ public class GameRenderer {
         gameCam.near = 0.1f;
         gameCam.far = 500f;
         gameCam.update();
-        gscene.setCam(gameCam);
+
         inputSic = new SchuCameraInput(gameCam);
         inputKbic = new InputAdapter() {
             final IntSet downKeys = new IntSet(20);
@@ -335,19 +322,23 @@ public class GameRenderer {
 
     private void renderScene() {
         ScreenUtils.clear(Color.valueOf("#4d4a71"), true);
-      //  modelBatch.begin(gameCam);
-       // modelBatch.render(envMi, env);
-      //  cannonA.setSubrot(0, ModelGroup.eulerToQuat(new Vector3(0, hud.getTheta(), 0)));
+        modelBatch.begin(gameCam);
+        modelBatch.render(envMi, env);
+       // cannonA.setSubrot(0, ModelGroup.eulerToQuat(new Vector3(0, hud.getPhi(), 0)));
+
         gmgr.getClient().getSelf().setProjVector(sphericalToRect(hud.getMag(), degToRad(hud.getTheta()), Math.PI / 2f));
-//        cannonA.update();
-//        cannonA.render(modelBatch);
-//        cannonB.setSubrot(0, ModelGroup.eulerToQuat(new Vector3(0, hud.getTheta(), 0)));
-//        cannonB.update();
-//        cannonB.render(modelBatch);
-       // sgCannonA.setSubrot(0, ModelGroup.eulerToQuat(new Vector3(0, hud.getTheta(), 0)));
-        gscene.render(Gdx.graphics.getDeltaTime());
-//        modelBatch.render(projMi, env);
-  //      modelBatch.end();
+       // cannonA.update();
+       // cannonA.render(modelBatch);
+
+        cannonB.setSubrot(0, ModelGroup.eulerToQuat(new Vector3(0, hud.getPhi(), 0)));
+      //  cannonB.setSubrot(0, ModelGroup.eulerToQuat(new Vector3(hud.getTheta(), 0, 0)));
+       // cannonB.setSubrot(0, new Quaternion(Vector3.Y, hud.getTheta()));
+        cannonB.setPos(hud.getMov());
+        cannonB.update();
+        cannonB.render(modelBatch);
+
+        modelBatch.render(projMi, env);
+        modelBatch.end();
 
         if (SchuGame.globalGame().isDebug()) {
             // ## Do what the keys dictate... ##
@@ -571,8 +562,8 @@ public class GameRenderer {
         float theta = (rho == 0) ? 0 : (float) Math.atan(pstate[1].y / pstate[1].x); // tan(θ) = y/x
         float phi = (float) ((rho == 0) ? Math.PI : Math.acos(pstate[1].z / rho)); // cos(φ) = z / ρ
 
-        playerModel.submodels.valueAt(0).transform.rotate(new Quaternion(Vector3.Y, (float) (Math.PI - phi))); // Replace barrel meshpart with rotated meshpart (π - φ for complement b/c cannon defaults to laying horizontally).
-        playerModel.rotate(new Quaternion(Vector3.Z, theta));
+        playerModel.subrotate(0, new Quaternion(Vector3.Y, (float) (Math.PI - phi))); // Replace barrel meshpart with rotated meshpart (π - φ for complement b/c cannon defaults to laying horizontally).
+        playerModel.rotate(new Quaternion(Vector3.X, theta));
     }
 
     public void transformModel(SceneGroup playerScene, UUID pid) {
@@ -585,7 +576,7 @@ public class GameRenderer {
         float theta = (rho == 0) ? 0 : (float) Math.atan(pstate[1].y / pstate[1].x); // tan(θ) = y/x
         float phi = (float) ((rho == 0) ? Math.PI : Math.acos(pstate[1].z / rho)); // cos(φ) = z / ρ
 
-        playerScene.submodels.valueAt(0).transform.rotate(new Quaternion(Vector3.Y, (float) (Math.PI - phi))); // Replace barrel meshpart with rotated meshpart (π - φ for complement b/c cannon defaults to laying horizontally).
+        playerScene.subrotate(0, new Quaternion(Vector3.Y, (float) (Math.PI - phi))); // Replace barrel meshpart with rotated meshpart (π - φ for complement b/c cannon defaults to laying horizontally).
         playerScene.rotate(new Quaternion(Vector3.Z, theta));
     }
 

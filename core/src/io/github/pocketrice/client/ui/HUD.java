@@ -28,6 +28,7 @@ import oshi.hardware.GlobalMemory;
 import oshi.hardware.GraphicsCard;
 import space.earlygrey.shapedrawer.ShapeDrawer;
 
+import java.io.InvalidObjectException;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -35,7 +36,8 @@ import java.util.stream.Collectors;
 import static io.github.pocketrice.client.GameClient.fillStr;
 import static io.github.pocketrice.client.Match.truncVec;
 import static io.github.pocketrice.client.Match.truncate;
-import static io.github.pocketrice.client.SchuGame.*;
+import static io.github.pocketrice.client.SchuGame.VIEWPORT_HEIGHT;
+import static io.github.pocketrice.client.SchuGame.VIEWPORT_WIDTH;
 import static io.github.pocketrice.shared.AnsiCode.ANSI_BLUE;
 import static io.github.pocketrice.shared.AnsiCode.ANSI_RESET;
 
@@ -59,8 +61,9 @@ public class HUD {
     private TextureAtlas mainSheet;
 
     private Sprite sprFlourish;
-    private Label labelTime, labelMatchInfo, labelTheta, labelMag, labelMoveLim;
+    private Label labelTime, labelMatchInfo, labelPhi, labelX, labelY, labelZ, labelTheta, labelMag, labelMoveLim;
     private Table sidebar;
+    private Sidebar sbMove;
 
     private ChainInterlerper phaseStartChInterlerp; // chinter = chain interlerper
     private LinkInterlerper<Float, ? super Pair<Sprite, SpriteBatch>> phaseFlourishInterlerp;
@@ -80,7 +83,7 @@ public class HUD {
     private GlobalMemory gmem;
     private float physMemTotal, virtualMemTotal;
 
-    public HUD(GameManager gm, GameRenderer gr) {
+    public HUD(GameManager gm, GameRenderer gr) throws InvalidObjectException {
         batch = new SpriteBatch();
         batchGroup = new BatchGroup();
         gmgr = gm;
@@ -113,7 +116,7 @@ public class HUD {
         Label magPreview = new Label("∥v∥ = ", thetaMagPrevStyle);
         Label thetaSel = new Label("0", thetaMagStyle);
         Label magSel = new Label("∥v∥", thetaMagStyle);
-        labelTheta = new Label("0°", thetaMagPrevStyle);
+        labelPhi = new Label("0°", thetaMagPrevStyle);
         labelMag = new Label("0.0 m/s", thetaMagPrevStyle);
         labelMoveLim = new Label("0m remaining", thetaMagStyle);
         labelMoveLim.setPosition(VIEWPORT_WIDTH / 2f, VIEWPORT_HEIGHT - 30f);
@@ -122,18 +125,18 @@ public class HUD {
         sidebar = new Table().left();
         sidebar.setPosition(1000, 400); // Set arbitrary distance outside of viewport as initial posOffset (note: ChainInterlerper should NEVER hide/show items, assuming it may be used for scenarios where terminal visible points are used)
         //sidebar.add(thetaPreview).pad(10f, 0f, 10f, 0f);
-        sidebar.add(labelTheta).pad(3f, 5f, 3f, 5f).center().minWidth(140);
+        sidebar.add(labelPhi).pad(3f, 5f, 3f, 5f).center().minWidth(140);
         sidebar.row().padTop(20);
         //sidebar.add(magPreview).pad(10f, 0f, 10f, 0f);
         sidebar.add(labelMag).pad(3f, 5f, 3f, 5f).center().minWidth(140);
         sidebar.row().padTop(20);
         //sidebar.add(thetaSel).pad(10f, 10f, 10f, 10f);
-        sidebar.add(new NumberButton(true, true, "**°", SchuButton.generateStyle("sm64", Color.WHITE, 25), 80f, 15f, 5f, labelTheta, amgr)).padRight(40).right();
-        sidebar.add(new NumberButton(false, true, "**°", SchuButton.generateStyle("sm64", Color.WHITE, 25), 80f, 15f, 5f, labelTheta, amgr)).padRight(40).right();
+        sidebar.add(new NumberButton(5f, true, "**°", SchuButton.generateStyle("sm64", Color.WHITE, 25), 80f, 15f, labelPhi)).padRight(40).right();
+        sidebar.add(new NumberButton(-5f, true, "**°", SchuButton.generateStyle("sm64", Color.WHITE, 25), 80f, 15f, labelPhi)).padRight(40).right();
         sidebar.row().padTop(20);
         //sidebar.add(magSel).pad(10f, 15f, 10f, 15f);
-        sidebar.add(new NumberButton(true, true, " m/s", SchuButton.generateStyle("sm64", Color.valueOf("#DEDEEE"), 25), 90f, 0f, 3f, labelMag, amgr)).padRight(40).right();
-        sidebar.add(new NumberButton(false, true, " m/s", SchuButton.generateStyle("sm64", Color.valueOf("#DEDEEE"), 25), 90f, 0f, 3f, labelMag, amgr)).padRight(40).right();
+        sidebar.add(new NumberButton( 3f, true, " m/s", SchuButton.generateStyle("sm64", Color.valueOf("#DEDEEE"), 25), 90f, 0f, labelMag)).padRight(40).right();
+        sidebar.add(new NumberButton(-3f, true, " m/s", SchuButton.generateStyle("sm64", Color.valueOf("#DEDEEE"), 25), 90f, 0f, labelMag)).padRight(40).right();
         sidebar.row().padTop(20);
 
         phaseStartChInterlerp = new ChainInterlerper(batch)
@@ -208,7 +211,14 @@ public class HUD {
                     System.out.println(ANSI_BLUE + "POST" + ANSI_RESET);
                     ((Pair<List, Interval>) objs).getValue1().unflag();
                 });
-
+        sbMove = new Sidebar(Orientation.LEFT);
+        sbMove.left();
+        Sidebar.templatise(sbMove, Color.valueOf("#DD9999ff"), "movX", "m (X)", "* m (X)", 20, 0, 2f);
+        Sidebar.templatise(sbMove, Color.valueOf("#99DD99ff"), "movY", "m (Y)", "* m (Y)", 20, 0, 2f);
+        Sidebar.templatise(sbMove, Color.valueOf("#9999DDff"), "movZ", "m (Z)", "* m (Z)", 20, 0, 2f);
+        sbMove.row(new Label("", thetaMagStyle)); // WIP blank line
+        Sidebar.templatise(sbMove, Color.valueOf("#bbe0e0ff"), "theta", "°", "*°", 360, 0, 10f);
+        sbMove.seal();
 
         sidebarPosInterlerp = LinkInterlerper.generatePosTransition(new Batchable(sidebar), new Vector2(1000, sidebar.getY()), new Vector2(700, sidebar.getY()), EasingFunction.EASE_OUT_BACK, 0.0075)
                 .preFunc((obj) -> batchGroup.enable(obj));
@@ -227,7 +237,7 @@ public class HUD {
         matchInfoWaitAnimInterlerp.setLooping(true);
 
 
-        SchuButton btnFire = new SchuButton("FIRE IN THE HOLE!", SchuButton.generateStyle("sm64", Color.valueOf("#8eb4a9bf"), 18), amgr)
+        SchuButton btnFire = new SchuButton("FIRE IN THE HOLE!", SchuButton.generateStyle("sm64", Color.valueOf("#8eb4a9bf"), 18))
                 .sfxDown("bw2_selmenu")
                 .activeFunc((objs) -> {
                     gmgr.submitPhase();
@@ -235,7 +245,6 @@ public class HUD {
                 });
 
         btnFire.reattachListener();
-
         btnFire.bindInterlerp(1f, 1.05f, InterlerpPreset.SCALE, EasingFunction.EASE_IN_OUT_SINE, 0.04);
         btnFire.bindInterlerp(Color.valueOf("#8eb4a9bf"), Color.valueOf("#adccc5bf"), InterlerpPreset.COLOR, EasingFunction.EASE_IN_OUT_SINE, 0.04);
         sidebar.add(btnFire).left();
@@ -243,6 +252,7 @@ public class HUD {
         batchGroup.add(new Batchable(btnFire)); // to be able to apply interlerps
         stage = new Stage();
         stage.addActor(sidebar);
+        stage.addActor(sbMove);
     }
 
     public void render() {
@@ -258,13 +268,15 @@ public class HUD {
             Color lmiColor = labelMatchInfo.getColor();
             labelMatchInfo.setColor(lmiColor.r, lmiColor.b, lmiColor.g, matchInfoOpacityInterlerp.advance());
             batchGroup.enable(labelMatchInfo);
+            sbMove.requestState(Sidebar.RequestedLerpState.ACTIVATE);
         } else {
             batchGroup.disable(labelMatchInfo);
+            sbMove.requestState(Sidebar.RequestedLerpState.DEACTIVATE);
         }
 
         batch.begin();
         batchGroup.draw(batch);
-
+        sbMove.draw(batch, 1f);
         updatePrompt();
         renderPrompt();
 
@@ -340,6 +352,7 @@ public class HUD {
         }
 
         batch.end();
+        sbMove.update();
         stage.act();
     }
 
@@ -367,7 +380,8 @@ public class HUD {
     public void renderPrompt() { // To be called anytime a part of prompt is rendered.
         Match matchState = gmgr.getMatchState();
         PhaseType phase = matchState.getPhase();
-        Vector3 projVec = (matchState.getCurrentPlayer() == null) ? Vector3.Zero : matchState.getCurrentPlayer().getProjVector();
+        Vector3 projVec = /* (matchState.getCurrentPlayer() == null) ? Vector3.Zero : */matchState.getCurrentPlayer().getProjVector();
+        System.out.println(projVec);
         fontbook.reset().font("benzin").fontSize(24).fontColor(Color.valueOf("#b8b1f22f"));
         fontbook.formatDraw(matchState.getIdentifier(), Orientation.TOP_RIGHT, batch);
 
@@ -428,12 +442,20 @@ public class HUD {
 //        }
     }
 
-    public float getTheta() {
-        return Float.parseFloat(NumberButton.revertSuffix(labelTheta.getText().toString(), "**°"));
+    public float getPhi() {
+        return Float.parseFloat(NumberButton.revertSuffix(labelPhi.getText().toString(), "**°"));
     }
 
     public float getMag() {
         return Float.parseFloat(NumberButton.revertSuffix(labelMag.getText().toString(), "** m/s"));
+    }
+
+    public float getTheta() {
+        return sbMove.queryBtn("theta");
+    }
+
+    public Vector3 getMov() {
+        return new Vector3(sbMove.queryBtn("movX"), sbMove.queryBtn("movY"), sbMove.queryBtn("movZ"));
     }
 
     public void loadAssets() {

@@ -49,7 +49,7 @@ public class GameScreen extends ScreenAdapter {
         fontbook = amgr.getFontbook();
         //fontbook.bind(batch);
 
-        btnStart = new SchuButton("TO WAR!", SchuButton.generateStyle("tf2build", Color.valueOf("#bbade4bf"), 60), amgr);
+        btnStart = new SchuButton("TO WAR!", SchuButton.generateStyle("tf2build", Color.valueOf("#bbade4bf"), 60));
 
         btnStart.activeObjs(List.of(gmgr, grdr, this, btnStart))
                 .activeFunc((objs) -> {

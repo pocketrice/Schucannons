@@ -119,7 +119,7 @@ public class MenuScreen extends ScreenAdapter {
         } else {
             if (!isUILoaded) {
                 schubs = Arrays.stream(game.getGmgr().getMatchlist())
-                        .map(m -> new SchuMenuButton( m, SchuButton.generateStyle("koholint", Color.valueOf("#afafdd"), 21), game.getGmgr(), amgr))
+                        .map(m -> new SchuMenuButton( m, SchuButton.generateStyle("koholint", Color.valueOf("#afafdd"), 21), game.getGmgr()))
                         .toList();
 
                 schubs.forEach(schub -> {
